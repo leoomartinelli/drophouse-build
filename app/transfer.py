@@ -12,14 +12,27 @@ from .core import E
 
 # ---------- origem (cartao SD / pasta manual) ----------
 
+_part = {"t": 0.0, "lista": []}
+_lock_part = threading.Lock()
+
+
+def _listar_particoes():
+    """psutil.disk_partitions reaproveitado por 1 s: a vigia do cartao (1,5 s) e a tela de origem (2 s) dividem a
+    mesma leitura. No Windows ela passa por cada unidade e pode acordar leitor de CD/DVD."""
+    with _lock_part:
+        if time.monotonic() - _part["t"] > 1.0:
+            _part.update(t=time.monotonic(), lista=psutil.disk_partitions())
+        return _part["lista"]
+
+
 def _particoes():
-    return {p.device: p.mountpoint for p in psutil.disk_partitions() if p.mountpoint}
+    return {p.device: p.mountpoint for p in _listar_particoes() if p.mountpoint}
 
 
 def _candidatos():
     """Pontos de montagem que parecem midia removivel."""
     saida = []
-    for p in psutil.disk_partitions():
+    for p in _listar_particoes():
         mp = p.mountpoint
         if not mp:
             continue
@@ -106,52 +119,84 @@ def _ler_marker(marker):
     return nome, mtime
 
 
-def coletar(pastas, so_novas):
-    """Retorna (arquivos, ja_descarregados, total_encontrados).
+def _fotos_por_pasta(origem):
+    """(pasta, [(nome, mtime)]) de cada pasta com fotos, recursivo. os.scandir traz a data junto da listagem
+    (no Windows sem acesso extra ao disco): no cartao SD, que e lento, isso pesa."""
+    pilha = [origem]
+    while pilha:
+        pasta = pilha.pop()
+        try:
+            it = os.scandir(pasta)
+        except OSError:
+            continue
+        fotos = []
+        with it:
+            for e in it:
+                try:
+                    if e.is_dir(follow_symlinks=False):
+                        pilha.append(e.path)
+                        continue
+                except OSError:
+                    continue
+                if e.name.lower().endswith(core.EXT_TODAS) and e.name != core.MARKER_NAME:
+                    try:
+                        mt = e.stat().st_mtime
+                    except OSError:
+                        mt = None
+                    fotos.append((e.name, mt))
+        if fotos:
+            yield pasta, fotos
 
-    so_novas=True descarta o que ja foi importado segundo o arquivo marcador de cada subpasta."""
-    arquivos, ja, total = [], 0, 0
+
+def _varrer(pastas):
+    """Uma passada pelo cartao: [(subpasta, [(nome, mtime)] em ordem de data)]."""
+    grupos = []
     for rel in pastas:
         origem = os.path.join(E.drive_path, os.path.normpath(rel))
         if not os.path.isdir(origem):
             continue
-        por_dir = {}
-        for root, _, files in os.walk(origem):
-            for f in files:
-                if f.lower().endswith(core.EXT_TODAS) and f != core.MARKER_NAME:
-                    por_dir.setdefault(root, []).append(f)
-        for subdir, files in por_dir.items():
-            total += len(files)
-            try:
-                files.sort(key=lambda f: os.path.getmtime(os.path.join(subdir, f)))
-            except Exception:
-                files.sort()
-            marker = os.path.join(subdir, core.MARKER_NAME)
-            if not (so_novas and os.path.exists(marker)):
-                arquivos.extend(os.path.join(subdir, f) for f in files)
-                continue
-            ultimo_nome, ultimo_mtime = _ler_marker(marker)
-            if ultimo_nome and ultimo_nome in files:
-                idx = files.index(ultimo_nome)
-                ja += idx + 1
-                arquivos.extend(os.path.join(subdir, f) for f in files[idx + 1:])
+        for subdir, fotos in _fotos_por_pasta(origem):
+            if any(mt is None for _, mt in fotos):
+                fotos.sort(key=lambda x: x[0])         # sem a data de alguma: ordem do nome, como antes
             else:
-                for f in files:
-                    fp = os.path.join(subdir, f)
-                    try:
-                        mt = os.path.getmtime(fp)
-                    except Exception:
-                        mt = 0
-                    if ultimo_mtime is None or mt > ultimo_mtime:
-                        arquivos.append(fp)
-                    else:
-                        ja += 1
+                fotos.sort(key=lambda x: x[1])
+            grupos.append((subdir, fotos))
+    return grupos
+
+
+def _separar(grupos, so_novas):
+    """so_novas=True descarta o que ja foi importado segundo o arquivo marcador de cada subpasta."""
+    arquivos, ja, total = [], 0, 0
+    for subdir, fotos in grupos:
+        total += len(fotos)
+        nomes = [n for n, _ in fotos]
+        marker = os.path.join(subdir, core.MARKER_NAME)
+        if not (so_novas and os.path.exists(marker)):
+            arquivos.extend(os.path.join(subdir, n) for n in nomes)
+            continue
+        ultimo_nome, ultimo_mtime = _ler_marker(marker)
+        if ultimo_nome and ultimo_nome in nomes:
+            idx = nomes.index(ultimo_nome)
+            ja += idx + 1
+            arquivos.extend(os.path.join(subdir, n) for n in nomes[idx + 1:])
+        else:
+            for n, mt in fotos:
+                if ultimo_mtime is None or (mt or 0) > ultimo_mtime:
+                    arquivos.append(os.path.join(subdir, n))
+                else:
+                    ja += 1
     return arquivos, ja, total
 
 
+def coletar(pastas, so_novas):
+    """Retorna (arquivos, ja_descarregados, total_encontrados)."""
+    return _separar(_varrer(pastas), so_novas)
+
+
 def planejar(pastas):
-    novas, ja, total = coletar(pastas, so_novas=True)
-    todas, _, _ = coletar(pastas, so_novas=False)
+    grupos = _varrer(pastas)                           # uma varredura so para as duas contagens
+    novas, ja, total = _separar(grupos, so_novas=True)
+    todas, _, _ = _separar(grupos, so_novas=False)
     return {
         "total_encontrados": total,
         "ja_descarregados": ja,
