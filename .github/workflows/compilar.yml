@@ -130,7 +130,8 @@ jobs:
             "Processo encerrado: $($proc.HasExited)  código: $($proc.ExitCode)"
             netstat -ano | Select-String ":5000[78]"
           }
-          try { Invoke-RestMethod -Method Post http://127.0.0.1:50007/api/encerrar | Out-Null } catch { }
+          # o servidor so aceita pedidos que mudam algo com o cabecalho X-DropHouse (protecao contra CSRF)
+          try { Invoke-RestMethod -Method Post -Headers @{ "X-DropHouse" = "1" } http://127.0.0.1:50007/api/encerrar | Out-Null } catch { }
           Get-Content "$env:USERPROFILE\Descarregador de Fotos\descarregador.log" -ErrorAction SilentlyContinue
           exit $r
       - name: Rede Líder/Auxiliar (Linux/macOS)
@@ -141,7 +142,9 @@ jobs:
           else BIN=dist/DescarregadorDeFotos/DescarregadorDeFotos; fi
           "$BIN" &
           r=0; python packaging/teste_rede.py 50007 || r=$?
-          curl -s -X POST http://127.0.0.1:50007/api/encerrar || true
+          # sem o cabecalho X-DropHouse o servidor recusa (403) e o programa ficaria aberto na 50007,
+          # atrapalhando o teste da atualizacao automatica, que abre outro programa na mesma porta
+          curl -s -X POST -H "X-DropHouse: 1" http://127.0.0.1:50007/api/encerrar || true
           cat "$HOME/Descarregador de Fotos/descarregador.log" || true
           exit $r
 
