@@ -2,11 +2,14 @@
 name: DropHouse
 description: Descarregador de fotos da House de Criatividade, do cartão SD ao Google Drive.
 colors:
-  lime-house: "#C1FF00"
-  lime-house-claro: "#D4FF4D"
-  lime-house-veu: "rgba(193,255,0,.12)"
-  lime-house-traco: "rgba(193,255,0,.45)"
-  preto-house: "#131313"
+  lime-house: "#70D068"
+  lime-house-claro: "#8FDE88"
+  lime-house-veu: "rgba(112,208,104,.13)"
+  lime-house-traco: "rgba(112,208,104,.48)"
+  tinta-verde: "#0A2E2B"
+  menta-simbolo: "#DDFDE6"
+  teal-simbolo: "#0B6D67"
+  preto-house: "#111513"
   preto-fundo-campo: "#0D0D0D"
   grafite-card: "#1A1A1A"
   grafite-elevado: "#212121"
@@ -20,34 +23,34 @@ colors:
   ambar-aviso: "#FFB020"
 typography:
   display:
-    fontFamily: "Anton, 'Arial Narrow', sans-serif"
+    fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "2.15rem"
-    fontWeight: 400
+    fontWeight: 800
     lineHeight: 0.98
     letterSpacing: "0.005em"
   headline:
-    fontFamily: "Anton, 'Arial Narrow', sans-serif"
+    fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "1.25rem"
-    fontWeight: 400
+    fontWeight: 800
     lineHeight: 1.1
     letterSpacing: "0.02em"
   title:
-    fontFamily: "Anton, 'Arial Narrow', sans-serif"
+    fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "1.12rem"
-    fontWeight: 400
+    fontWeight: 800
     letterSpacing: "0.04em"
   body:
-    fontFamily: "'Inter Tight', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.5
   label:
-    fontFamily: "'Inter Tight', system-ui, sans-serif"
+    fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "0.72rem"
     fontWeight: 700
     letterSpacing: "0.16em"
   wordmark:
-    fontFamily: "'Inter Tight', system-ui, sans-serif"
+    fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 300
     lineHeight: 1
@@ -138,13 +141,13 @@ components:
 
 A interface é o visor de uma câmera: um fundo escuro e neutro que não compete com a foto, e uma única cor viva, o Lime House, marcando onde está a ação. O voluntário olha para a tela no fim do culto, muitas vezes num auditório com pouca luz, e precisa achar o próximo passo de relance. Tudo que não é o próximo passo fica em grafite e cinza.
 
-A identidade vem da House de Criatividade: preto e lime, títulos condensados em caixa alta (Anton) e o símbolo de oito raios com a casa no centro. Do manual da marca vem também o canto de enquadramento, aqui usado como cantos lime no cartão do passo atual, como um visor que enquadra o que importa agora. Os componentes são macios e decididos: pílulas e cantos arredondados, um botão lime por tela e uma resposta tátil a cada clique.
+A identidade vem da House de Criatividade, com o símbolo próprio do DropHouse: uma caixa verde com olhinhos (degradê do #70D068 ao #0B6D67, sobre um quadrado menta #DDFDE6). O verde do símbolo é a cor de ação da interface; os nomes `lime-house*` ficaram por compatibilidade, mas hoje apontam para esse verde. Os grafites têm um leve tom esverdeado para conversar com o símbolo. Tudo em Inter, com títulos pesados em caixa alta. Do manual da marca vem também o canto de enquadramento, aqui usado como cantos lime no cartão do passo atual, como um visor que enquadra o que importa agora. Os componentes são macios e decididos: pílulas e cantos arredondados, um botão lime por tela e uma resposta tátil a cada clique.
 
 O sistema é escuro por decisão, não por moda: a foto é julgada sobre fundo neutro, como num editor, e o ambiente de uso é escuro. Não há tema claro.
 
 **Key Characteristics:**
 - Fundo preto da House com camadas de grafite; uma só cor de destaque.
-- Títulos em Anton, caixa alta; texto em Inter Tight.
+- Tudo em Inter: títulos em Inter 800 em caixa alta; texto em Inter normal; caminhos e nomes de arquivo na fonte mono do sistema.
 - Botões em pílula, cards de 20px, campos de 12px.
 - Ícones de traço fino (1,75), nunca emoji.
 - Movimento curto com desaceleração suave; nada elástico, nada brilhando.
@@ -154,13 +157,13 @@ O sistema é escuro por decisão, não por moda: a foto é julgada sobre fundo n
 Preto e lime da House, com uma escada de grafites para as camadas e dois sinais de estado.
 
 ### Primary
-- **Lime House** (`lime-house`): a ação principal da tela (um botão por tela), o passo atual, o que deu certo (conectado, concluído), o foco de campos. Texto sobre ele é sempre Preto House.
+- **Lime House** (`lime-house`): a ação principal da tela (um botão por tela), o passo atual, o que deu certo (conectado, concluído), o foco de campos. Texto sobre ele é sempre a Tinta verde (`tinta-verde`).
 - **Lime House claro** (`lime-house-claro`): só o hover do botão principal.
 - **Véu lime** (`lime-house-veu`): fundo de seleção e hover em listas, chips e itens marcados.
 - **Traço lime** (`lime-house-traco`): contornos lime discretos (botão de contorno, grupo selecionado).
 
 ### Neutral
-- **Preto House** (`preto-house`): fundo da página e texto sobre o lime.
+- **Preto House** (`preto-house`): fundo da página (grafite com um toque de verde).
 - **Preto de campo** (`preto-fundo-campo`): fundo de campos, listas de seleção e caminhos de pasta; um degrau abaixo do fundo, para o campo parecer "escavado".
 - **Grafite card** (`grafite-card`): cards, janelas, quadro de envios.
 - **Grafite elevado** (`grafite-elevado`): itens dentro de cards, chips, botão secundário.
@@ -180,20 +183,21 @@ Preto e lime da House, com uma escada de grafites para as camadas e dois sinais 
 
 ## Typography
 
-**Display Font:** Anton (com Arial Narrow)
-**Body Font:** Inter Tight (com system-ui)
+**Display Font:** Inter, peso 800 (com system-ui)
+**Body Font:** Inter (com system-ui)
+**Mono:** fonte mono do sistema
 
-**Character:** A Anton traz a voz gráfica da House, condensada e em caixa alta; a Inter Tight é a voz de trabalho, firme e legível em tamanhos pequenos, e também desenha o wordmark "drop**house**" no mesmo estilo de "**house** de criatividade". As duas fontes ficam dentro do app (`app/static/fonts`), porque o programa roda offline.
+**Character:** Uma família só. A Inter pesada, em caixa alta, é a voz de título; a Inter normal é a voz de trabalho, firme e legível em tamanhos pequenos. É variável (peso e tamanho óptico: nos títulos grandes ela assume o desenho da Inter Display) e fica local em `/static/fonts`, porque o programa roda offline. No CSS, as regras de título usam `--f-titulo` e `--p-titulo` (peso).
 
 ### Hierarchy
-- **Display** (Anton 400, 2,15rem, 0,98): título de cada tela ("Painel inicial", nome do Servir). O título do passo atual sobe para 1,6rem.
-- **Headline** (Anton 400, 1,25rem, 1,1): títulos de cards e janelas.
-- **Title** (Anton 400, 1,12rem, +0,04em): botões grandes de ação (criar Servir, selecionar fotos, modo avulso).
-- **Body** (Inter Tight 400, 15px, 1,5): todo o texto corrido, botões (600, 0,92rem) e rótulos de campo (600, 0,88rem).
-- **Label** (Inter Tight 700, 0,72rem, +0,16em, caixa alta): subtítulos de seção em cinza ("Estações conectadas", "Enviar para o Google Drive") e nomes dos passos.
+- **Display** (Inter 800, 2,15rem, 0,98): título de cada tela ("Painel inicial", nome do Servir). O título do passo atual sobe para 1,6rem.
+- **Headline** (Inter 800, 1,25rem, 1,1): títulos de cards e janelas.
+- **Title** (Inter 800, 1,12rem, +0,04em): botões grandes de ação (criar Servir, selecionar fotos, modo avulso).
+- **Body** (Inter 400, 15px, 1,5): todo o texto corrido, botões (600, 0,92rem) e rótulos de campo (600, 0,88rem).
+- **Label** (Inter 700, 0,72rem, +0,16em, caixa alta): subtítulos de seção em cinza ("Estações conectadas", "Enviar para o Google Drive") e nomes dos passos.
 
 ### Named Rules
-**The Anton Only Shouts Rule.** Anton só em títulos e no botão grande; nunca em parágrafo, campo ou lista.
+**The Caps Only Shouts Rule.** Inter pesada em caixa alta só em títulos e nos botões de ação; nunca em parágrafo, campo ou lista.
 
 ## Layout
 
@@ -223,7 +227,7 @@ Formas macias. Botões, chips, avisos e selos são pílulas (999px). Cards e qua
 - **Primary:** Lime House com texto Preto House; é o próximo passo e aparece uma vez por tela.
 - **Hover / Focus:** sobe 1px; ao clicar afunda (escala 0,97). Foco por teclado: contorno lime de 2px afastado 2px.
 - **Secundário:** grafite elevado com texto Papel. **Discreto:** transparente com contorno Linha forte. **Perigo:** transparente, contorno e texto vermelhos. **Contorno lime:** ações importantes que não são o passo principal (enviar ao Drive, pasta do Servir).
-- **Grande:** largura total, Anton em caixa alta, para a ação central de uma tela.
+- **Grande:** largura total, Inter pesada em caixa alta, para a ação central de uma tela.
 - **Toque:** em telas de toque, todo botão tem pelo menos 44px de altura.
 
 ### Chips
@@ -242,10 +246,10 @@ Formas macias. Botões, chips, avisos e selos são pílulas (999px). Cards e qua
 - **Disabled:** opacidade 0,38.
 
 ### Navigation
-- **Cabeçalho:** símbolo da House em lime (gira 45° no hover) e o wordmark "drop**house**". Sem menu: cada tela tem seu título e um botão Voltar em pílula discreta.
+- **Cabeçalho:** a caixa com olhinhos e o wordmark "drop**house**". A caixa é animada de leve num ciclo de 7s: os olhos olham para os lados e piscam, e ela dá um pulinho que esbarra no nome. No hover o ciclo acelera; com `prefers-reduced-motion` tudo fica parado. Sem menu: cada tela tem seu título e um botão Voltar em pílula discreta.
 
 ### Indicador de passos (Signature Component)
-Círculos de 36px ligados por linhas. Passo atual: círculo lime cheio com número em Anton e um anel lime fino afastado 4px. Passos concluídos: contorno lime com ícone de check, e a linha até o próximo passo fica lime. Os passos já preenchidos aparecem como resumos acima do cartão, cada um com ícone lime.
+Círculos de 36px ligados por linhas. Passo atual: círculo lime cheio com número em Inter pesada e um anel lime fino afastado 4px. Passos concluídos: contorno lime com ícone de check, e a linha até o próximo passo fica lime. Os passos já preenchidos aparecem como resumos acima do cartão, cada um com ícone lime.
 
 ### Seleção de fotos
 Tela cheia sobre fundo quase preto (#0B0B0B), barra de ações no topo, tira de miniaturas embaixo com a atual contornada em lime e as descartadas em vermelho apagado. A foto descartada fica cinza e ganha o selo "DESCARTADA" em pílula vermelha.
@@ -265,4 +269,4 @@ Tela cheia sobre fundo quase preto (#0B0B0B), barra de ações no topo, tira de 
 - **Don't** usar curva elástica ou de quique.
 - **Don't** colocar molduras ou cantos sobre a foto na seleção de fotos.
 - **Don't** criar tema claro sem decisão da equipe; o sistema é escuro por escolha.
-- **Don't** usar Anton em texto corrido.
+- **Don't** usar caixa alta pesada em texto corrido.
