@@ -1,5 +1,6 @@
 """Google Drive: credenciais, login OAuth, teste de conexao, nome de pasta e upload."""
 import concurrent.futures
+import importlib.util
 import json
 import os
 import queue
@@ -8,15 +9,29 @@ import threading
 from . import core
 from .core import E
 
+# As bibliotecas do Google pesam ~24 MB e ~0,1 s para carregar: so sao importadas na primeira vez que o Drive e
+# usado (login ou envio). Estacao que nunca envia nao paga esse custo. Aqui so confere se estao instaladas.
 try:
-    from google.auth.transport.requests import Request
-    from google.oauth2.credentials import Credentials
-    from google_auth_oauthlib.flow import InstalledAppFlow
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaFileUpload, MediaInMemoryUpload
-    DISPONIVEL = True
-except ImportError:
+    DISPONIVEL = all(importlib.util.find_spec(m) for m in ("googleapiclient", "google_auth_oauthlib", "google.oauth2"))
+except (ImportError, ValueError):
     DISPONIVEL = False
+_lock_google = threading.Lock()
+_google_carregado = False
+
+
+def _google():
+    global Request, Credentials, InstalledAppFlow, build, MediaFileUpload, MediaInMemoryUpload, _google_carregado
+    if _google_carregado:
+        return
+    with _lock_google:
+        if _google_carregado:
+            return
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
+        from google_auth_oauthlib.flow import InstalledAppFlow
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload, MediaInMemoryUpload
+        _google_carregado = True
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
@@ -87,6 +102,7 @@ def _credenciais():
     if not DISPONIVEL or not os.path.exists(core.PATH_TOKEN):
         return None
     try:
+        _google()
         creds = Credentials.from_authorized_user_file(core.PATH_TOKEN, SCOPES)
         if creds and not creds.valid and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -111,6 +127,7 @@ def iniciar_login():
 
     def fluxo():
         try:
+            _google()
             flow = InstalledAppFlow.from_client_secrets_file(core.PATH_CRED, SCOPES)
             creds = flow.run_local_server(port=0)
             with open(core.PATH_TOKEN, 'w', encoding='utf-8') as f:
@@ -353,6 +370,8 @@ def _enviar(job, creds, folder_id, arquivos, raiz=None):
             print(f"Erro ao registrar envios ao Drive: {e}")
     total = job["total"]
     job.update(estado="rodando", msg=f"Enviando 0/{total}...")
+    local = threading.local()      # um cliente por thread (httplib2 nao e thread-safe), reaproveitado entre as fotos:
+                                   # mantem a conexao HTTPS aberta em vez de um handshake TLS novo a cada arquivo
 
     def um(caminho):
         nome = os.path.basename(caminho)
@@ -361,7 +380,9 @@ def _enviar(job, creds, folder_id, arquivos, raiz=None):
         enviado = False
         if os.path.exists(caminho):
             try:
-                svc = build('drive', 'v3', credentials=creds)
+                if not hasattr(local, "svc"):
+                    local.svc = build('drive', 'v3', credentials=creds)
+                svc = local.svc
                 meta = {'name': nome}
                 if folder_id != 'root':
                     meta['parents'] = [folder_id]
@@ -375,6 +396,7 @@ def _enviar(job, creds, folder_id, arquivos, raiz=None):
                 enviado = True
             except Exception as e:
                 print(f"Erro ao enviar {nome}: {e}")
+                local.__dict__.pop("svc", None)    # conexao pode ter caido: a proxima foto abre uma nova
         if enviado:
             registrar(caminho)
         else:

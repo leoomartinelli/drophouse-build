@@ -975,7 +975,8 @@ async function abrirEditor(inicio = 0) {
     $('#e-angv').textContent = cortando.angulo.toFixed(1).replace('.', ',') + '°';
   }
   img.addEventListener('load', () => setTimeout(posCorte, 0));
-  addEventListener('resize', () => setTimeout(posCorte, 50));
+  const resCorte = () => setTimeout(posCorte, 50);
+  addEventListener('resize', resCorte);
   // maior retangulo da proporcao escolhida, centrado no corte atual, dentro da area valida
   function encaixar() {
     const r = proporcao(); if (!r) return;
@@ -1204,7 +1205,9 @@ async function abrirEditor(inicio = 0) {
     let n = await atualizaLista();
     while (n > 0) { aviso(`Salvando ${n} foto(s) editada(s)…`); await new Promise(r => setTimeout(r, 800)); n = await atualizaLista(); }
     const erros = fotos.filter(f => f.estado.startsWith('erro'));
-    document.removeEventListener('keydown', tecla); zoom.destruir(); el.remove();
+    // solta tudo que prendia o editor na memoria (antes, cada vez que abria e fechava ficava um editor inteiro preso)
+    document.removeEventListener('keydown', tecla); removeEventListener('resize', resCorte); removeEventListener('resize', resPrevia);
+    clearTimeout(tRes); zoom.destruir(); el.remove(); if (urlBlob) { URL.revokeObjectURL(urlBlob); urlBlob = null; }
     if (erros.length) await alerta('Atenção', `${erros.length} foto(s) não puderam ser salvas e ficaram como estavam:\n${erros.map(f => f.nome).join(', ')}`);
     render();
   }
@@ -1244,7 +1247,8 @@ async function abrirEditor(inicio = 0) {
     try { await api(`/api/editor/${i}/restaurar`, { body: {} }); versaoMini[i] = Date.now(); historico.delete(i); await atualizaLista(); carregar(); } catch (e) { toast(e.message, true); }
   };
   let tRes = null;
-  addEventListener('resize', () => { if (!document.body.contains(el)) return; cvDesenha(); clearTimeout(tRes); tRes = setTimeout(agendar, 250); });   // so revela de novo quando parar de redimensionar
+  const resPrevia = () => { cvDesenha(); clearTimeout(tRes); tRes = setTimeout(agendar, 250); };   // so revela de novo quando parar de redimensionar
+  addEventListener('resize', resPrevia);
   painel(); carregar();
 }
 

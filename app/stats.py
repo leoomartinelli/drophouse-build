@@ -9,6 +9,29 @@ from . import core, drive
 from .core import E
 
 
+# camera/lente de cada foto ja lida: as estatisticas do Servir sao recalculadas ao fim de cada descarregamento e de
+# cada envio ao Drive, e sem isso abriam todas as fotos do Servir de novo (em HD lento, milhares de leituras)
+_exif = {}
+_lock_exif = threading.Lock()
+
+
+def camera_e_lente(caminho):
+    """extrair_camera_e_lente com cache por (caminho, data de modificacao): foto editada e lida de novo."""
+    try:
+        chave = (caminho, os.stat(caminho).st_mtime_ns)
+    except OSError:
+        return "Desconhecida", "Desconhecida"
+    with _lock_exif:
+        if chave in _exif:
+            return _exif[chave]
+    r = extrair_camera_e_lente(caminho)
+    with _lock_exif:
+        if len(_exif) > 50000:          # teto de memoria (~10 MB); na pratica um Servir tem poucos milhares de fotos
+            _exif.clear()
+        _exif[chave] = r
+    return r
+
+
 def extrair_camera_e_lente(caminho):
     camera = lente = "Desconhecida"
     if caminho.lower().endswith(('.mp4', '.mov', '.avi', '.wav')):
@@ -72,7 +95,7 @@ def obter_estatisticas_locais():
                         if core._chave_arquivo(raiz, os.path.join(root, nome)) in enviados:
                             no_drive += 1
                         if nome.lower().endswith(core.EXT_IMG):
-                            cam, len_ = extrair_camera_e_lente(os.path.join(root, nome))
+                            cam, len_ = camera_e_lente(os.path.join(root, nome))
                             if cam != "Desconhecida":
                                 cams.add(cam)
                             if len_ != "Desconhecida":
