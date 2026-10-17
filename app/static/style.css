@@ -405,3 +405,6 @@ input[type=checkbox]:checked:disabled{opacity:.45}
  .ic.desenha{animation:none;stroke-dashoffset:0}
  button:hover:not(:disabled),button:active:not(:disabled){transform:none}
 }
+/* tela de concluido: aplicar um preset em todas as fotos sem abrir o editor */
+.preset-todas{margin-top:12px;padding:12px 14px;border:1px solid var(--bord);border-radius:var(--r);background:var(--card2)}
+.preset-todas label{margin-top:0}.preset-todas .mini{margin:8px 0 0}

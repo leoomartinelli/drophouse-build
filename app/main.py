@@ -387,7 +387,8 @@ def iniciar_transferencia(d: dict = Body(...)):
 
 @app.get("/api/transferencia/status")
 def status_transferencia():
-    return E.transfer
+    # edicoes_pendentes: preset aplicado em todas as fotos ainda salvando (a tela mostra quantas faltam)
+    return {**E.transfer, "edicoes_pendentes": editor.pendentes()}
 
 
 @app.post("/api/transferencia/nova")

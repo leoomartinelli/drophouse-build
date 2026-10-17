@@ -450,3 +450,17 @@ def test_perfil_revela_na_resolucao_original(tmp_path):
     editor._render(origem, destino, {"perfil": {"lut": editor.perfis()[0]["lut"]}})
     with Image.open(destino) as im:
         assert im.size == (4000, 2600)
+
+
+@motor
+def test_preset_em_todas_pela_tela_de_concluido():
+    # a tela de concluido manda o preset para todas as fotos e acompanha pelo status da transferencia
+    fotos = descarregar(3)
+    casa = next(p for p in editor.predefinicoes_prontas() if p["ajustes"]["perfil"])
+    r = local.post("/api/editor/aplicar", json={"indices": list(range(len(fotos))), "ajustes": casa["ajustes"],
+                                                "grupos": ["luz", "curva", "cor"]})
+    assert r.json() == {"ok": True, "fotos": 3}
+    assert "edicoes_pendentes" in local.get("/api/transferencia/status").json()
+    esperar_salvar()
+    assert local.get("/api/transferencia/status").json()["edicoes_pendentes"] == 0
+    assert all(f["editada"] for f in local.get("/api/editor").json()["fotos"])
