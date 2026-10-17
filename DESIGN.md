@@ -30,10 +30,10 @@ typography:
     letterSpacing: "0.005em"
   headline:
     fontFamily: "Inter, system-ui, sans-serif"
-    fontSize: "1.25rem"
-    fontWeight: 800
-    lineHeight: 1.1
-    letterSpacing: "0.02em"
+    fontSize: "1.125rem"
+    fontWeight: 700
+    lineHeight: 1.25
+    letterSpacing: "-0.01em"
   title:
     fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "1.12rem"
@@ -190,18 +190,18 @@ Preto e lime da House, com uma escada de grafites para as camadas e dois sinais 
 **Character:** Uma família só. A Inter pesada, em caixa alta, é a voz de título; a Inter normal é a voz de trabalho, firme e legível em tamanhos pequenos. É variável (peso e tamanho óptico: nos títulos grandes ela assume o desenho da Inter Display) e fica local em `/static/fonts`, porque o programa roda offline. No CSS, as regras de título usam `--f-titulo` e `--p-titulo` (peso).
 
 ### Hierarchy
-- **Display** (Inter 800, 2,15rem, 0,98): título de cada tela ("Painel inicial", nome do Servir). O título do passo atual sobe para 1,6rem.
-- **Headline** (Inter 800, 1,25rem, 1,1): títulos de cards e janelas.
-- **Title** (Inter 800, 1,12rem, +0,04em): botões grandes de ação (criar Servir, selecionar fotos, modo avulso).
+- **Display** (Inter 800, 2,15rem, 0,98, caixa alta): título de cada tela ("Painel inicial", nome do Servir). É o único texto grande em caixa alta.
+- **Headline** (Inter 700, 1,125rem, 1,25, frase normal): títulos de cards e janelas ("Dias de Servir anteriores"). O título do passo atual sobe para 1,4rem.
+- **Title** (Inter 700, 0,98 a 1,05rem, frase normal): botões de ação ("Criar e ativar Servir", "Selecionar fotos").
 - **Body** (Inter 400, 15px, 1,5): todo o texto corrido, botões (600, 0,92rem) e rótulos de campo (600, 0,88rem).
 - **Label** (Inter 700, 0,72rem, +0,16em, caixa alta): subtítulos de seção em cinza ("Estações conectadas", "Enviar para o Google Drive") e nomes dos passos.
 
 ### Named Rules
-**The Caps Only Shouts Rule.** Inter pesada em caixa alta só em títulos e nos botões de ação; nunca em parágrafo, campo ou lista.
+**The Caps Only Shouts Rule.** Caixa alta só no título da tela (h1) e nos rótulos pequenos (h3, eyebrow, nomes dos passos). Títulos de card e botões ficam em frase normal, para o título da tela se destacar.
 
 ## Layout
 
-Conteúdo centralizado em até 1100px, com 18px de margem; o assistente de descarregar estreita para 760px, porque é uma tarefa de uma coluna. O Painel inicial usa duas colunas (criar Servir à esquerda; Servir anteriores e rede à direita) e vira uma coluna abaixo de 820px. Abaixo de 520px, campos e botões de uma linha quebram: o campo ocupa a linha inteira e os botões descem; itens de lista põem o texto em cima e os botões embaixo. O topo de cada tela tem título à esquerda e ações à direita, separados do conteúdo por uma linha. Ritmo: 6, 8, 12, 18, 22 e 28px.
+Conteúdo centralizado em até 1100px (`--wrap-largo`), com 18px de margem; o assistente de descarregar e as Predefinições estreitam para 760px (`--wrap-estreito`). O logo do cabeçalho e o rodapé acompanham a largura da tela atual (`body[data-largura]`), para ficarem sempre alinhados com o título. O Painel inicial usa duas colunas (criar Servir à esquerda; Servir anteriores e rede à direita) e vira uma coluna abaixo de 820px. Abaixo de 520px, campos e botões de uma linha quebram: o campo ocupa a linha inteira e os botões descem; itens de lista põem o texto em cima e os botões embaixo. O topo de cada tela tem título à esquerda e ações à direita, separados do conteúdo por uma linha. Ritmo: 6, 8, 12, 18, 22 e 28px.
 
 ## Elevation & Depth
 
@@ -227,7 +227,11 @@ Formas macias. Botões, chips, avisos e selos são pílulas (999px). Cards e qua
 - **Primary:** Lime House com texto Preto House; é o próximo passo e aparece uma vez por tela.
 - **Hover / Focus:** sobe 1px; ao clicar afunda (escala 0,97). Foco por teclado: contorno lime de 2px afastado 2px.
 - **Secundário:** grafite elevado com texto Papel. **Discreto:** transparente com contorno Linha forte. **Perigo:** transparente, contorno e texto vermelhos. **Contorno lime:** ações importantes que não são o passo principal (enviar ao Drive, pasta do Servir).
-- **Grande:** largura total, Inter pesada em caixa alta, para a ação central de uma tela.
+- **Grande:** largura total, Inter 700 em frase normal, para a ação central de uma tela (só "Selecionar fotos" hoje).
+- **Fantasma:** só texto e ícone em cinza, para ações terciárias ("Abrir pasta", "Novo descarregamento").
+- **Desabilitado:** sempre com o motivo visível numa linha cinza logo abaixo (`travar(btn, motivo)` no `app.js`), também no `title` e no `aria-describedby`.
+- **Encerrar:** só ícone, na ponta direita do topo, separado das outras ações; no celular vai para o menu "⋯".
+- **Menu "⋯":** ações secundárias e perigosas de um item (Editar, Excluir) ficam num menu, longe do botão principal.
 - **Toque:** em telas de toque, todo botão tem pelo menos 44px de altura.
 
 ### Chips
@@ -244,9 +248,16 @@ Formas macias. Botões, chips, avisos e selos são pílulas (999px). Cards e qua
 - **Style:** fundo Preto de campo, borda Linha, 12px de canto, 11px por 14px de respiro. Select com seta própria em cinza.
 - **Focus:** borda Lime House; por teclado, também um contorno de 3px em véu lime.
 - **Disabled:** opacidade 0,38.
+- **Erro:** a mensagem aparece logo abaixo do campo (`erroCampo`), o campo ganha borda vermelha e `aria-invalid`, e o foco vai para ele. A linha do erro já existe vazia com altura reservada (`campoErro`), então nada pula. Botões "Continuar" ficam sempre habilitados e validam no clique.
+- **Lista no campo:** voluntários, categorias e pastas de predefinição viram chips dentro da própria caixa; Enter ou vírgula adicionam, colar "Ana, Leo, Bia" cria três, Backspace no vazio tira o último. Nomes de pessoas são normalizados ("leo" → "Leo").
 
 ### Navigation
-- **Cabeçalho:** a caixa com olhinhos e o wordmark "drop**house**". A caixa é animada de leve num ciclo de 7s: os olhos olham para os lados e piscam, e ela dá um pulinho que esbarra no nome. No hover o ciclo acelera; com `prefers-reduced-motion` tudo fica parado. Sem menu: cada tela tem seu título e um botão Voltar em pílula discreta.
+- **Cabeçalho:** a caixa com olhinhos e o wordmark "drop**house**". A caixa é animada de leve num ciclo de 7s: os olhos olham para os lados e piscam, e ela dá um pulinho que esbarra no nome. No hover o ciclo acelera; depois de 3 ciclos sem ninguém mexer na tela, tudo para (volta com qualquer movimento); dentro do editor e da seleção fica parada; com `prefers-reduced-motion` nada se mexe.
+- **Voltar:** volta sempre para a tela de onde veio (pilha em `ir()` / `voltar()`). "Início" é o atalho fixo para o Painel.
+
+### Mascote
+A mesma caixa do logo, em estados (`mascote(estado, tamanho)` no `app.js`): **espera** (olha em volta e pisca: esperando o cartão), **achou** (pulinho e olhos arregalados: cartão detectado), **recebendo** (fotos caem dentro dela: copiando), **feliz** / **feliz-pula** (fim da cópia, com 6 confetes), **enviando** (fotos sobem: envio ao Drive, no painel de envios), **erro** (treme, olhos tristes: janelas de erro), **dormindo** (cinza, olhos fechados, respirando: estados vazios).
+- **Regra de desempenho:** só `transform` e `opacity`, em `@keyframes`, e só em elementos de HTML (corpo, olhos e fotos ficam por cima de um SVG parado). Assim tudo roda na composição, sem layout nem pintura por quadro. O nó é criado uma vez; os polls só trocam a classe (`mascoteEstado`). Para quando a aba fica escondida (`body.pausado`) e com `prefers-reduced-motion`.
 
 ### Indicador de passos (Signature Component)
 Círculos de 36px ligados por linhas. Passo atual: círculo lime cheio com número em Inter pesada e um anel lime fino afastado 4px. Passos concluídos: contorno lime com ícone de check, e a linha até o próximo passo fica lime. Os passos já preenchidos aparecem como resumos acima do cartão, cada um com ícone lime.

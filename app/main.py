@@ -1,6 +1,7 @@
 """Servidor web do Descarregador de Fotos."""
 import ipaddress
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -53,16 +54,38 @@ def precisa_reiniciar():
     return _cache_reinicio["v"]
 
 
+# Quem pode falar com a tela: a requisicao vem da propria maquina, mas um site qualquer aberto no navegador tambem
+# sai de 127.0.0.1. Por isso, alem do IP:
+# - Host precisa ser localhost/127.0.0.1: um dominio que passa a apontar para 127.0.0.1 (DNS rebinding) e recusado;
+# - todo pedido que muda algo (nao-GET) precisa do cabecalho X-DropHouse, que a tela manda e um site de fora nao
+#   consegue mandar sem o navegador perguntar antes (e o servidor nao libera CORS). Isso barra o CSRF.
+HOSTS_LOCAIS = {"localhost", "127.0.0.1", "[::1]", "::1", "testserver"}
+CABECALHO_TELA = "x-drophouse"
+
+
+def _nome_host(request):
+    h = (request.headers.get("host") or "").strip().lower()
+    if h.startswith("["):                       # IPv6: [::1]:50007
+        return h.split("]")[0] + "]"
+    return h.rsplit(":", 1)[0]
+
+
 @app.middleware("http")
 async def restringir_acesso(request: Request, call_next):
-    if request.url.path not in ROTAS_LAN and os.environ.get("ALLOW_REMOTE_UI") != "1":
-        host = request.client.host if request.client else ""
-        try:
-            local = ipaddress.ip_address(host).is_loopback
-        except ValueError:
-            local = host in ("localhost", "testclient")
-        if not local:
-            return JSONResponse({"erro": "Acesso permitido apenas na própria máquina."}, status_code=403)
+    if request.url.path not in ROTAS_LAN:
+        remoto = os.environ.get("ALLOW_REMOTE_UI") == "1"
+        if not remoto:
+            host = request.client.host if request.client else ""
+            try:
+                local = ipaddress.ip_address(host).is_loopback
+            except ValueError:
+                local = host in ("localhost", "testclient")
+            if not local:
+                return JSONResponse({"erro": "Acesso permitido apenas na própria máquina."}, status_code=403)
+            if _nome_host(request) not in HOSTS_LOCAIS:
+                return JSONResponse({"erro": "Endereço não permitido."}, status_code=403)
+        if request.method not in ("GET", "HEAD", "OPTIONS") and request.headers.get(CABECALHO_TELA) != "1":
+            return JSONResponse({"erro": "Requisição recusada (sem o cabeçalho da tela do DropHouse)."}, status_code=403)
     return await call_next(request)
 
 
@@ -91,6 +114,8 @@ def estado():
         "versao": versao.VERSAO, "empacotado": versao.EMPACOTADO,
         "atualizacao": atualizador.ESTADO,
         "editor_disponivel": raw.disponivel(),
+        # so a existencia dos arquivos (barato): o botao "Login Google" mostra se ha conta conectada
+        "google": {"credenciais": os.path.exists(core.PATH_CRED), "token": os.path.exists(core.PATH_TOKEN)},
     }
 
 
@@ -346,13 +371,36 @@ def definir_origem(dados: dict = Body(...)):
     return {"ok": True}
 
 
+@app.post("/api/origem/previa")
+def previa_origem(d: dict = Body(...)):
+    """Fotos, tamanho e formatos das pastas marcadas, para a tela mostrar antes de copiar."""
+    if not E.cartao_detectado:
+        return {"fotos": 0, "bytes": 0, "tipos": []}
+    return transfer.previa(d.get("pastas") or [])
+
+
+def _espaco_livre(caminho):
+    """Espaco livre no disco do destino (sobe ate a primeira pasta que ja existe)."""
+    p = os.path.abspath(caminho or "")
+    while p and not os.path.isdir(p):
+        pai = os.path.dirname(p)
+        if pai == p:
+            break
+        p = pai
+    try:
+        return shutil.disk_usage(p).free
+    except Exception:
+        return None
+
+
 @app.get("/api/destino/preview")
 def preview_destino(base: str = "", fotografo: str = "", categoria: str = "Raiz (Nenhuma)",
                     subpasta: bool = True):
     if not base:
-        return {"caminho": "Selecione a pasta de destino acima..."}
+        return {"caminho": "Selecione a pasta de destino acima...", "livre": None}
     return {"caminho": core.calcular_caminho_final(base, fotografo or "(Aguardando nome do fotógrafo)",
-                                                    categoria, subpasta)}
+                                                    categoria, subpasta),
+            "livre": _espaco_livre(base)}
 
 
 def _validar_transferencia(d):
@@ -389,6 +437,13 @@ def iniciar_transferencia(d: dict = Body(...)):
 def status_transferencia():
     # edicoes_pendentes: preset aplicado em todas as fotos ainda salvando (a tela mostra quantas faltam)
     return {**E.transfer, "edicoes_pendentes": editor.pendentes()}
+
+
+@app.post("/api/transferencia/cancelar")
+def cancelar_transferencia():
+    if not transfer.cancelar():
+        erro("Não há cópia em andamento para cancelar.")
+    return {"ok": True}
 
 
 @app.post("/api/transferencia/nova")
@@ -572,6 +627,14 @@ def upload_iniciar(d: dict = Body(default={})):
 @app.get("/api/uploads")
 def upload_lista():
     return E.uploads
+
+
+@app.post("/api/uploads/parar")
+def parar_uploads(d: dict = Body(default={})):
+    """Para um envio ao Drive ({"id": n}) ou todos (sem id)."""
+    if not drive.parar_envio(d.get("id")):
+        erro("Não há envio em andamento para parar.")
+    return {"ok": True}
 
 
 @app.post("/api/uploads/limpar")

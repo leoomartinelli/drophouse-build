@@ -40,8 +40,28 @@ def _candidatos():
         if os.name == 'nt' and p.device and not p.device.upper().startswith('C:'):
             removivel = True
         if removivel and os.path.isdir(mp):
-            saida.append({"device": p.device, "mountpoint": mp})
+            saida.append({"device": p.device, "mountpoint": mp, **_volume(mp)})
     return saida
+
+
+_vol_cache = {}
+
+
+def _volume(mp):
+    """Nome e espaco do volume, para a tela mostrar cada cartao como um card. Guardado por 15 s: a tela pergunta a
+    origem a cada 2 s, e ler o espaco toda vez pode acordar o disco (ou travar num leitor vazio, no Windows)."""
+    agora = time.monotonic()
+    t, v = _vol_cache.get(mp, (0.0, None))
+    if v is not None and agora - t < 15:
+        return v
+    nome = os.path.basename(mp.rstrip("\\/")) or mp
+    try:
+        u = psutil.disk_usage(mp)
+        v = {"nome": nome, "total": u.total, "usado": u.used}
+    except Exception:
+        v = {"nome": nome, "total": 0, "usado": 0}
+    _vol_cache[mp] = (agora, v)
+    return v
 
 
 def monitorar_cartao():
@@ -73,7 +93,7 @@ def definir_origem(pasta):
 def listar_pastas_origem():
     """Itens do checklist: pasta completa + subpastas de DCIM (ou pastas da raiz)."""
     drive = E.drive_path
-    itens = [{"valor": ".", "rotulo": "[Pasta Completa] Importar tudo desta pasta principal"}]
+    itens = [{"valor": ".", "rotulo": "Importar a pasta inteira"}]
     if not drive or not os.path.isdir(drive):
         return itens
     dcim = os.path.join(drive, "DCIM")
@@ -120,7 +140,7 @@ def _ler_marker(marker):
 
 
 def _fotos_por_pasta(origem):
-    """(pasta, [(nome, mtime)]) de cada pasta com fotos, recursivo. os.scandir traz a data junto da listagem
+    """(pasta, [(nome, mtime, tamanho)]) de cada pasta com fotos, recursivo. os.scandir traz a data junto da listagem
     (no Windows sem acesso extra ao disco): no cartao SD, que e lento, isso pesa."""
     pilha = [origem]
     while pilha:
@@ -140,23 +160,42 @@ def _fotos_por_pasta(origem):
                     continue
                 if e.name.lower().endswith(core.EXT_TODAS) and e.name != core.MARKER_NAME:
                     try:
-                        mt = e.stat().st_mtime
+                        st = e.stat()
+                        mt, tam = st.st_mtime, st.st_size
                     except OSError:
-                        mt = None
-                    fotos.append((e.name, mt))
+                        mt, tam = None, 0
+                    fotos.append((e.name, mt, tam))
         if fotos:
             yield pasta, fotos
 
 
+def _pastas_seguras(pastas):
+    """As pastas marcadas, como caminhos absolutos DENTRO do cartao/origem e sem repeticao:
+    - "../..", caminho absoluto ou link que aponta para fora sao ignorados;
+    - "." (a pasta inteira) engole as outras; uma pasta dentro de outra marcada tambem sai
+      (antes, marcar "Importar a pasta inteira" + "DCIM/100" contava e copiava as fotos duas vezes)."""
+    if not E.drive_path or not os.path.isdir(E.drive_path):
+        return []
+    raiz = os.path.realpath(E.drive_path)
+    alvos = []
+    for rel in dict.fromkeys(pastas or []):
+        alvo = os.path.realpath(os.path.join(raiz, os.path.normpath(str(rel))))
+        if os.path.commonpath([raiz, alvo]) == raiz and os.path.isdir(alvo):
+            alvos.append(alvo)
+    alvos.sort(key=len)
+    saida = []
+    for a in alvos:
+        if not any(os.path.commonpath([s, a]) == s for s in saida):
+            saida.append(a)
+    return saida
+
+
 def _varrer(pastas):
-    """Uma passada pelo cartao: [(subpasta, [(nome, mtime)] em ordem de data)]."""
+    """Uma passada pelo cartao: [(subpasta, [(nome, mtime, tamanho)] em ordem de data)]."""
     grupos = []
-    for rel in pastas:
-        origem = os.path.join(E.drive_path, os.path.normpath(rel))
-        if not os.path.isdir(origem):
-            continue
+    for origem in _pastas_seguras(pastas):
         for subdir, fotos in _fotos_por_pasta(origem):
-            if any(mt is None for _, mt in fotos):
+            if any(mt is None for _, mt, _ in fotos):
                 fotos.sort(key=lambda x: x[0])         # sem a data de alguma: ordem do nome, como antes
             else:
                 fotos.sort(key=lambda x: x[1])
@@ -169,7 +208,7 @@ def _separar(grupos, so_novas):
     arquivos, ja, total = [], 0, 0
     for subdir, fotos in grupos:
         total += len(fotos)
-        nomes = [n for n, _ in fotos]
+        nomes = [n for n, _, _ in fotos]
         marker = os.path.join(subdir, core.MARKER_NAME)
         if not (so_novas and os.path.exists(marker)):
             arquivos.extend(os.path.join(subdir, n) for n in nomes)
@@ -180,7 +219,7 @@ def _separar(grupos, so_novas):
             ja += idx + 1
             arquivos.extend(os.path.join(subdir, n) for n in nomes[idx + 1:])
         else:
-            for n, mt in fotos:
+            for n, mt, _ in fotos:
                 if ultimo_mtime is None or (mt or 0) > ultimo_mtime:
                     arquivos.append(os.path.join(subdir, n))
                 else:
@@ -188,9 +227,14 @@ def _separar(grupos, so_novas):
     return arquivos, ja, total
 
 
-def coletar(pastas, so_novas):
-    """Retorna (arquivos, ja_descarregados, total_encontrados)."""
-    return _separar(_varrer(pastas), so_novas)
+def coletar(pastas, so_novas, tamanhos=None):
+    """Retorna (arquivos, ja_descarregados, total_encontrados). `tamanhos` (dict opcional) recebe caminho -> bytes."""
+    grupos = _varrer(pastas)
+    if tamanhos is not None:
+        for subdir, fotos in grupos:
+            for n, _, tam in fotos:
+                tamanhos[os.path.join(subdir, n)] = tam
+    return _separar(grupos, so_novas)
 
 
 def planejar(pastas):
@@ -208,6 +252,58 @@ def planejar(pastas):
     }
 
 
+_previa_geracao = 0
+
+
+def previa(pastas, teto_seg=4.0, teto_itens=200_000):
+    """Quantas fotos, quantos bytes e quais formatos ha nas pastas marcadas (sem copiar nada).
+    Cada pedido novo encerra o anterior (a tela pede de novo a cada caixa marcada) e a varredura tem teto de tempo
+    e de itens: num HD externo inteiro ela para e devolve "parcial", em vez de prender as threads da API."""
+    global _previa_geracao
+    _previa_geracao += 1
+    minha, t0, vistos = _previa_geracao, time.monotonic(), 0
+    fotos, tam, tipos = 0, 0, set()
+
+    def resultado(parcial=False):
+        return {"fotos": fotos, "bytes": tam, "tipos": sorted(tipos, key=lambda t: (t == "RAW", t)), "parcial": parcial}
+    for origem in _pastas_seguras(pastas):
+        pilha = [origem]
+        while pilha:
+            pasta = pilha.pop()
+            try:
+                it = os.scandir(pasta)
+            except OSError:
+                continue
+            with it:
+                for e in it:
+                    vistos += 1
+                    if minha != _previa_geracao:
+                        return None                                  # ja chegou um pedido mais novo
+                    if vistos > teto_itens or time.monotonic() - t0 > teto_seg:
+                        return resultado(parcial=True)
+                    try:
+                        if e.is_dir(follow_symlinks=False):
+                            pilha.append(e.path)
+                            continue
+                        n = e.name.lower()
+                        if not n.endswith(core.EXT_TODAS) or e.name == core.MARKER_NAME:
+                            continue
+                        fotos += 1
+                        tam += e.stat().st_size
+                        tipos.add("RAW" if n.endswith(core.EXT_RAW) else os.path.splitext(n)[1][1:].upper().replace("JPEG", "JPG"))
+                    except OSError:
+                        continue
+    return resultado()
+
+
+def cancelar():
+    """Pede para a copia parar: os arquivos que ainda nao comecaram sao pulados."""
+    if E.transfer.get("estado") == "rodando" and E.transfer.get("fase") != "convertendo":
+        E.transfer["cancelar"] = True
+        return True
+    return False
+
+
 # ---------- copia ----------
 
 def iniciar(fotografo, destino_base, pastas, categoria, criar_subpasta, modo, converter_raw=False):
@@ -219,21 +315,25 @@ def iniciar(fotografo, destino_base, pastas, categoria, criar_subpasta, modo, co
     destino = core.calcular_caminho_final(destino_base, fotografo, categoria, criar_subpasta)
     base_fotografo = os.path.dirname(destino) if os.path.basename(destino).startswith(f"{fotografo}_") \
         and os.path.basename(destino) != fotografo and core.tem_midia(os.path.dirname(destino)) else destino
-    arquivos, _, _ = coletar(pastas, so_novas=(modo == "novas"))
+    tamanhos = {}
+    arquivos, _, _ = coletar(pastas, so_novas=(modo == "novas"), tamanhos=tamanhos)
     if not arquivos:
         raise RuntimeError("Nenhuma imagem encontrada nas pastas selecionadas.")
     if converter_raw and not raw.disponivel():
         raise RuntimeError("O conversor de RAW para JPEG não está instalado neste computador.")
     E.arquivos_transferidos = []
+    # resumo: origem, fotografo e destino ficam no status para a tela de concluido mostrar o que foi feito
     E.transfer = {"estado": "rodando", "progresso": 0, "total": len(arquivos), "feitos": 0,
-                  "msg": "Copiando...", "destino": destino}
+                  "msg": "Copiando...", "destino": destino, "bytes_total": 0, "bytes_feitos": 0, "atual": "",
+                  "resumo": {"origem": E.drive_path, "pastas": list(pastas), "fotografo": fotografo,
+                             "categoria": categoria, "destino": destino}}
     painel.copiando(fotografo)
-    threading.Thread(target=_copiar, args=(fotografo, destino, base_fotografo, arquivos, converter_raw),
+    threading.Thread(target=_copiar, args=(fotografo, destino, base_fotografo, arquivos, converter_raw, tamanhos),
                      daemon=True).start()
     return {"total": len(arquivos), "destino": destino}
 
 
-def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False):
+def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False, tamanhos=None):
     import shutil
     t0 = time.time()
     try:
@@ -252,13 +352,23 @@ def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False):
             E.transfer["aviso"] = aviso
         digitos = max(3, len(str(inicio + total)))
 
+        # tamanhos vieram da propria varredura (scandir): nada de ler o cartao de novo antes de copiar
+        tamanhos = tamanhos or {}
+        E.transfer["bytes_total"] = sum(tamanhos.get(a, 0) for a in arquivos)
+
         lock = threading.Lock()
+        pulados = [0]
         copiados = []
         transferidos = []
 
         def processar(item):
             idx, origem = item
+            if E.transfer.get("cancelar"):
+                with lock:
+                    pulados[0] += 1                      # so conta como cancelada se alguma foto ficou de fora
+                return
             nome_orig = os.path.basename(origem)
+            E.transfer["atual"] = nome_orig
             ext = os.path.splitext(nome_orig)[1].lower()
             novo = f"{fotografo}_{idx + inicio:0{digitos}d}{ext}"
             alvo = os.path.join(destino, novo)
@@ -277,10 +387,20 @@ def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False):
                 print(f"Erro ao processar {nome_orig}: {e}")
             with lock:
                 E.transfer["feitos"] += 1
+                E.transfer["bytes_feitos"] += tamanhos.get(origem, 0)
                 E.transfer["progresso"] = E.transfer["feitos"] / total
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
             list(ex.map(processar, enumerate(arquivos)))
+        E.transfer.pop("cancelar", None)                 # pedido tarde demais (tudo ja copiado) segue como concluida
+
+        if pulados[0]:
+            # sem marcador nem historico: as copias terminaram fora de ordem, entao o proximo descarregamento
+            # precisa olhar o cartao inteiro de novo. O que ja foi copiado fica na pasta.
+            E.transfer.update(estado="cancelado", atual="",
+                              msg=f"Cópia cancelada: {len(copiados)} de {total} arquivo(s) já estavam copiados e ficaram na pasta.")
+            painel.liberar()
+            return
 
         _gravar_markers(copiados)
         if copiados and E.active_servir:

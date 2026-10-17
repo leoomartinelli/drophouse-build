@@ -52,7 +52,7 @@ class Releases(http.server.BaseHTTPRequestHandler):
 def api(metodo, rota, corpo=None):
     dados = json.dumps(corpo).encode() if corpo is not None else None
     req = urllib.request.Request(f"http://127.0.0.1:{PORTA}{rota}", data=dados, method=metodo,
-                                 headers={"Content-Type": "application/json"} if dados else {})
+                                 headers={"X-DropHouse": "1", **({"Content-Type": "application/json"} if dados else {})})
     with urllib.request.urlopen(req, timeout=5) as r:
         return json.load(r)
 

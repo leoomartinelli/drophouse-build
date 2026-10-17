@@ -335,6 +335,19 @@ def iniciar_upload(link_pasta, fotografo=""):
     return {"id": job["id"], "total": job["total"], "ignoradas": subindo + ja_foram}
 
 
+def parar_envio(job_id=None):
+    """Para um envio (ou todos, sem id): o que esta na fila nem comeca; no que esta subindo, as fotos que ainda nao
+    comecaram sao puladas e as que ja estao subindo terminam. O que foi enviado continua marcado como enviado,
+    entao mandar de novo depois sobe so o que faltou."""
+    parados = 0
+    for j in list(E.uploads):              # copia: outra thread pode estar cortando a lista (so os 20 mais recentes)
+        if j["estado"] in ("fila", "rodando") and (job_id is None or j["id"] == job_id):
+            j["parar"] = True
+            j["msg"] = "Parando..."
+            parados += 1
+    return parados
+
+
 def limpar_concluidos():
     E.uploads[:] = [j for j in E.uploads if j["estado"] in ("fila", "rodando")]
 
@@ -369,11 +382,18 @@ def _enviar(job, creds, folder_id, arquivos, raiz=None):
         except Exception as e:
             print(f"Erro ao registrar envios ao Drive: {e}")
     total = job["total"]
+    if job.get("parar"):                       # parado ainda na fila: nem comeca
+        job.update(estado="parado", atuais=[], msg="Envio parado antes de começar.")
+        with _lock_fila:
+            _em_envio.difference_update(arquivos)
+        return
     job.update(estado="rodando", msg=f"Enviando 0/{total}...")
     local = threading.local()      # um cliente por thread (httplib2 nao e thread-safe), reaproveitado entre as fotos:
                                    # mantem a conexao HTTPS aberta em vez de um handshake TLS novo a cada arquivo
 
     def um(caminho):
+        if job.get("parar"):
+            return
         nome = os.path.basename(caminho)
         with lock:
             job["atuais"].append(nome)   # so para exibir na tela: arquivos sendo enviados agora
@@ -407,7 +427,8 @@ def _enviar(job, creds, folder_id, arquivos, raiz=None):
                 job["atuais"].remove(nome)
             job["feitos"] += 1
             job["progresso"] = job["feitos"] / total
-            job["msg"] = f"Enviando {job['feitos']}/{total}..."
+            if not job.get("parar"):
+                job["msg"] = f"Enviando {job['feitos']}/{total}..."
 
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
@@ -416,9 +437,12 @@ def _enviar(job, creds, folder_id, arquivos, raiz=None):
         if raiz:
             from . import stats   # import tardio: stats importa drive
             stats.atualizar_voluntarios_em_segundo_plano()
-        ok = total - job["erros"]
-        job.update(estado="concluido" if not job["erros"] else "erro", progresso=1, atuais=[],
-                   msg=f"{ok} de {total} fotos enviadas para {job['destino']}.")
+        ok = job["feitos"] - job["erros"]
+        if job.get("parar"):
+            job.update(estado="parado", atuais=[], msg=f"Envio parado: {ok} de {total} fotos enviadas para {job['destino']}.")
+        else:
+            job.update(estado="concluido" if not job["erros"] else "erro", progresso=1, atuais=[],
+                       msg=f"{ok} de {total} fotos enviadas para {job['destino']}.")
     except Exception as e:
         registrar(forcar=True)
         job.update(estado="erro", atuais=[], msg=f"Erro durante o envio: {e}")

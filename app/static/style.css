@@ -26,6 +26,8 @@
  /* peso dos titulos (Inter em caixa alta) */
  --p-titulo:800;
  --r:12px;--r2:20px;--pill:999px;
+ /* largura do conteudo: telas largas (Painel, Historico) e estreitas (assistente, Predefinicoes) */
+ --wrap-largo:1100px;--wrap-estreito:760px;--wrap-atual:var(--wrap-largo);
  --sai:cubic-bezier(.16,1,.3,1);
  color-scheme:dark;
 }
@@ -39,35 +41,41 @@ a{color:var(--lima);text-underline-offset:3px}
 code{font-family:var(--f-mono);font-size:.85em;background:var(--card2);padding:1px 5px;border-radius:3px}
 
 /* ---------- tipografia ---------- */
-h1,h2{font-family:var(--f-titulo);font-weight:var(--p-titulo);text-transform:uppercase;text-wrap:balance}
-h1{font-size:2.15rem;line-height:.98;letter-spacing:.005em;margin:0}
-h2{font-size:1.25rem;line-height:1.1;letter-spacing:.02em;margin:0 0 .9rem}
+/* caixa alta so no h1 da pagina e nos rotulos pequenos (h3, eyebrow); titulos de card em frase normal */
+h1,h2{font-family:var(--f-titulo);text-wrap:balance}
+h1{font-weight:var(--p-titulo);text-transform:uppercase;font-size:2.15rem;line-height:.98;letter-spacing:.005em;margin:0}
+h2{font-weight:700;font-size:1.125rem;line-height:1.25;letter-spacing:-.01em;margin:0 0 .9rem}
+@media(max-width:520px){h1{font-size:1.7rem}}
 h3{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.16em;color:var(--mut);margin:1.4rem 0 .5rem}
 p{margin:.5rem 0}
 .mut{color:var(--mut)}.ok{color:var(--lima)}.warn{color:var(--lar)}.bad{color:var(--verm)}.az{color:var(--txt)}
 .mini{font-size:.84rem}
 
 /* ---------- marca (cabecalho fixo do index.html) ---------- */
-.marca{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:1100px;margin:0 auto;padding:18px 18px 0}
+.marca{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:var(--wrap-atual);margin:0 auto;padding:18px 18px 0}
 .marca-id{display:flex;align-items:center;gap:12px;color:var(--txt);text-decoration:none}
-.simbolo{width:42px;height:42px;flex:none;overflow:visible}
-/* o quadrado menta fica parado; a caixa da um pulinho e esbarra no nome; os olhinhos olham em volta e piscam,
-   e seguem o mouse quando ele se mexe (app.js poe .segue e a posicao em --ox/--oy) */
-.simbolo .dh-caixa{transform-box:view-box;transform-origin:50% 92%;animation:dh-pulo 7s var(--sai) infinite}
+/* simbolo: o quadrado menta e um SVG parado; a caixa e os olhos sao elementos de HTML por cima dele, entao o pulinho,
+   o olhar e a piscada rodam so na composicao (sem layout nem pintura). A caixa da um pulinho e esbarra no nome; os olhos
+   olham em volta, piscam e seguem o mouse (app.js poe .segue e a posicao em --ox/--oy). */
+.simbolo{position:relative;display:inline-block;width:42px;height:42px;flex:none;cursor:pointer}
+.simbolo>svg,.dh-caixa>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.simbolo .dh-caixa{position:absolute;inset:0;transform-origin:50% 92%;animation:dh-pulo 7s var(--sai) infinite}
+.dh-olhos{position:absolute;inset:0}
+.dh-olho{position:absolute;left:47.5%;top:56.7%;width:15.4%;height:26.2%;border-radius:50%;background:#fdfdfd}
+.dh-olho+.dh-olho{left:69.9%;top:52.3%}
 .simbolo .dh-olhos{animation:dh-olhar 7s ease-in-out infinite}
+.simbolo .dh-olho{animation:dh-piscar 7s infinite}
 .simbolo.segue .dh-olhos{animation:none;translate:var(--ox,0) var(--oy,0);transition:translate .12s ease-out}
 /* clique no simbolo: pulo mais alto com os olhos apertados de alegria (app.js poe .pula ate a animacao acabar) */
-.simbolo{cursor:pointer}
-svg.simbolo.pula .dh-caixa{animation:dh-pulinho .9s var(--sai)}
-svg.simbolo.pula .dh-olho{animation:dh-apertar .9s ease-in-out}
-svg.simbolo.pula+.wordmark{animation:dh-esbarra .9s}
+span.simbolo.pula .dh-caixa{animation:dh-pulinho .9s var(--sai)}
+span.simbolo.pula .dh-olho{animation:dh-apertar .9s ease-in-out}
+span.simbolo.pula+.wordmark{animation:dh-esbarra .9s}
 @keyframes dh-pulinho{0%{transform:none}14%{transform:scale(1.1,.86)}42%{transform:translateY(-34%) rotate(-11deg) scale(.94,1.08)}66%{transform:translateY(0) rotate(4deg) scale(1.12,.86)}82%{transform:translateY(-7%) rotate(-1deg) scale(.98,1.03)}100%{transform:none}}
 @keyframes dh-apertar{0%,100%{scale:1 1}20%,70%{scale:1.05 .35}}
-.simbolo .dh-olho{transform-box:fill-box;transform-origin:50% 50%;animation:dh-piscar 7s infinite}
 .marca-id .wordmark{display:inline-block;transform-origin:0 100%;animation:dh-esbarra 7s infinite}
-.marca-id:hover .dh-caixa,.marca-id:hover .dh-olho,.marca-id:hover .wordmark{animation-duration:2.4s}
-@keyframes dh-olhar{0%,10%{translate:0 0}14%,28%{translate:-34px 8px}32%,46%{translate:30px -6px}50%,64%{translate:0 0}
- 70%,86%{translate:22px -14px}92%,100%{translate:0 0}}
+.marca-id:hover .dh-caixa,.marca-id:hover .dh-olho,.marca-id:hover .dh-olhos,.marca-id:hover .wordmark{animation-duration:2.4s}
+@keyframes dh-olhar{0%,10%{translate:0 0}14%,28%{translate:-4.9% 1.2%}32%,46%{translate:4.3% -.9%}50%,64%{translate:0 0}
+ 70%,86%{translate:3.2% -2.1%}92%,100%{translate:0 0}}
 @keyframes dh-piscar{0%,38%,42%,95%,100%{scale:1 1}40%,97%{scale:1 .08}}
 @keyframes dh-pulo{0%,64%{transform:none}68%{transform:scale(1.06,.92)}74%{transform:translateY(-14%) rotate(-7deg) scale(.96,1.05)}
  80%{transform:translateY(0) rotate(2deg) scale(1.08,.9)}85%{transform:translateY(-3%) rotate(0) scale(.98,1.02)}90%,100%{transform:none}}
@@ -75,11 +83,11 @@ svg.simbolo.pula+.wordmark{animation:dh-esbarra .9s}
 @media(prefers-reduced-motion:reduce){.simbolo,.simbolo *,.marca-id .wordmark{animation:none!important}}
 .wordmark{font-size:1.5rem;line-height:1;letter-spacing:-.045em;font-weight:300}
 .wordmark b{font-weight:800}
-.assina{max-width:1064px;margin:28px auto 0;padding:18px 0 22px;display:flex;justify-content:space-between;gap:12px;color:var(--fraco);font-size:.8rem;letter-spacing:-.02em;border-top:1px solid var(--bord)}
+.assina{max-width:calc(var(--wrap-atual) - 36px);margin:28px auto 0;padding:18px 0 22px;display:flex;justify-content:space-between;gap:12px;color:var(--fraco);font-size:.8rem;letter-spacing:-.02em;border-top:1px solid var(--bord)}
 @media(max-width:620px){.assina{flex-direction:column;gap:2px;margin:28px 18px 0}}
 
 /* ---------- estrutura ---------- */
-.wrap{max-width:1100px;margin:0 auto;padding:18px}
+.wrap{max-width:var(--wrap-atual);margin:0 auto;padding:18px}
 .topbar{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin:14px 0 22px;padding-bottom:20px;border-bottom:1px solid var(--bord)}
 .topbar .mut.mini{margin-top:6px}
 .topbar .acts{display:flex;flex-wrap:wrap;gap:8px}
@@ -126,8 +134,8 @@ button.roxo:hover:not(:disabled){border-color:var(--lima-b)}
 button.pq{padding:7px 13px;font-size:.82rem;gap:6px}
 button.pq .ic{width:15px;height:15px}
 button.so-ic{padding:10px;aspect-ratio:1}
-button.medio{padding:11px 22px;font-family:var(--f-titulo);font-weight:var(--p-titulo);font-size:.98rem;letter-spacing:.04em;text-transform:uppercase}
-button.grande{padding:16px 22px;width:100%;font-family:var(--f-titulo);font-weight:var(--p-titulo);font-size:1.12rem;letter-spacing:.04em;text-transform:uppercase}
+button.medio{padding:12px 22px;font-weight:700;font-size:.98rem}
+button.grande{padding:15px 22px;width:100%;font-weight:700;font-size:1.05rem}
 .btns a,.acts a{text-decoration:none}
 
 @media(pointer:coarse){button,button.pq{min-height:44px}button.so-ic{min-width:44px}.chip-x{padding:8px;margin:-5px -10px -5px -2px}}
@@ -163,7 +171,7 @@ button.chip:hover:not(:disabled){background:var(--card2);border-color:var(--lima
 .tags input[type=text]{flex:1;min-width:110px;width:auto;padding:5px 6px;border:0;background:transparent}
 .tags input[type=text]:focus,.tags input[type=text]:focus-visible{outline:none;border:0}
 button.avulso{margin-top:12px}
-@media(max-width:520px){.row>.tags{flex:1 1 100%}}
+@media(max-width:520px){.row>.tags,.row>.campo-lido{flex:1 1 100%}}
 .checks{max-height:220px;overflow:auto;border:1px solid var(--bord);border-radius:var(--r);padding:6px 12px;background:var(--bg2)}
 .checks label{font-weight:500;margin:6px 0;display:flex;gap:10px;align-items:center;cursor:pointer}
 .path{font-family:var(--f-mono);font-size:.82rem;background:var(--bg2);border:1px solid var(--bord);color:#DADAD3;padding:9px 11px;border-radius:var(--r);overflow-wrap:anywhere}
@@ -188,11 +196,11 @@ progress::-moz-progress-bar{background:var(--lima);border-radius:999px}
 @keyframes toast{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 
 /* ---------- janelas ---------- */
-.modal-bg{position:fixed;inset:0;background:rgba(5,5,5,.74);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:50;padding:14px;animation:aparece .2s ease-out}
+.modal-bg{position:fixed;inset:0;background:rgba(5,5,5,.74);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:75;padding:14px;animation:aparece .2s ease-out}
 .modal{background:var(--card);border:1px solid var(--bord2);border-radius:24px;padding:28px;max-width:560px;width:100%;max-height:88vh;overflow:auto;white-space:pre-line;
  box-shadow:0 30px 70px -20px rgba(0,0,0,.8);animation:sobe .35s var(--sai)}
 .modal.larga{max-width:700px;white-space:normal}
-.modal h2{font-size:1.5rem;margin-bottom:.7rem}
+.modal h2{font-size:1.3rem;margin-bottom:.7rem}
 .modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
 /* botao sem classe na janela = a resposta principal (OK, Sim): lime */
 .modal .btns button:not([class]){background:var(--lima);border-color:var(--lima);color:var(--lima-ink)}
@@ -223,7 +231,7 @@ progress::-moz-progress-bar{background:var(--lima);border-radius:999px}
 .passo::before{content:"";position:absolute;inset:-1px;border:2px solid var(--lima);border-radius:inherit;pointer-events:none;
  -webkit-mask:linear-gradient(#000 0 0),linear-gradient(#000 0 0) center/calc(100% - 64px) calc(100% + 8px) no-repeat,linear-gradient(#000 0 0) center/calc(100% + 8px) calc(100% - 64px) no-repeat;
  -webkit-mask-composite:xor;mask:linear-gradient(#000 0 0),linear-gradient(#000 0 0) center/calc(100% - 64px) calc(100% + 8px) no-repeat,linear-gradient(#000 0 0) center/calc(100% + 8px) calc(100% - 64px) no-repeat;mask-composite:exclude}
-.passo h2{font-size:1.6rem}
+.passo h2{font-size:1.4rem;letter-spacing:-.015em}
 .passo h2.ok{color:var(--lima)}
 /* fim da copia: o check se desenha */
 .ic.desenha{stroke-width:2.6;stroke-dasharray:24;stroke-dashoffset:24;animation:traco .7s .15s var(--sai) forwards}
@@ -438,3 +446,209 @@ input[type=checkbox]:checked:disabled{opacity:.45}
 /* tela de concluido: aplicar um preset em todas as fotos sem abrir o editor */
 .preset-todas{margin-top:12px;padding:12px 14px;border:1px solid var(--bord);border-radius:var(--r);background:var(--card2)}
 .preset-todas label{margin-top:0}.preset-todas .mini{margin:8px 0 0}
+
+/* ==========================================================================
+   Auditoria de UX (out/2026): componentes novos
+   ========================================================================== */
+/* larguras: o cabecalho acompanha a largura do conteudo da tela atual */
+body[data-largura=estreito]{--wrap-atual:var(--wrap-estreito)}
+.numeros{font-variant-numeric:tabular-nums}
+.eyebrow{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.16em;color:var(--lima);margin-bottom:4px}
+.conta{display:inline-grid;place-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--lima-a);color:var(--lima);font-size:.74rem;font-variant-numeric:tabular-nums;vertical-align:1px}
+.rotulo{display:block;font-weight:600;font-size:.88rem;margin:16px 0 6px}
+label.check{font-weight:400;display:flex;gap:10px;align-items:center;margin-top:12px;cursor:pointer}
+
+/* motivo de botao desabilitado e erro de campo (altura reservada: nada pula) */
+.motivo{margin:6px 0 0;font-size:.82rem;color:var(--mut)}
+.erro-campo{min-height:1.3em;margin:4px 0 0;font-size:.82rem;color:var(--verm);line-height:1.3}
+.erro-campo:empty{margin:0}
+.erro-campo+label,.erro-campo+.rotulo{margin-top:4px}
+.invalido,input.invalido,.tags.invalido{border-color:var(--verm)!important}
+
+/* topo: Encerrar separado na ponta direita; no celular ele vai para o menu "⋯" */
+.acts-sep{flex:1;min-width:12px}
+.topbar .acts{align-items:center}
+.topbar .acts>details.mais{display:none}
+@media(max-width:620px){.topbar .so-largo{display:none}.topbar .acts>details.mais{display:block}.acts-sep{display:none}}
+button .pt{margin:0 0 0 2px}
+
+/* menu "⋯" */
+details.mais{position:relative;flex:none}
+details.mais summary{list-style:none;cursor:pointer;display:inline-grid;place-content:center;width:34px;height:34px;border-radius:999px;border:1px solid var(--bord2);color:var(--txt);transition:background .15s,border-color .15s}
+details.mais summary::-webkit-details-marker{display:none}
+details.mais summary:hover,details.mais[open] summary{background:rgba(255,255,255,.05);border-color:#5A5A5A}
+details.mais summary:focus-visible{outline:2px solid var(--lima);outline-offset:2px}
+.mais-lista{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:180px;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--card2);border:1px solid var(--bord2);border-radius:var(--r);box-shadow:0 16px 36px -12px rgba(0,0,0,.8)}
+.mais-lista button{justify-content:flex-start;width:100%;border:0;border-radius:8px;background:transparent;padding:9px 12px}
+.mais-lista button:hover:not(:disabled){background:rgba(255,255,255,.06);transform:none}
+.mais-lista button.verm:hover:not(:disabled){background:var(--verm-a)}
+
+/* Painel inicial: "Criar novo Dia do Servir" e sempre a faixa larga de cima (abrir nao muda a disposicao);
+   aberto, os campos se dividem em duas colunas dentro dele. Servir anteriores e Rede ficam lado a lado embaixo. */
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.home-grid>.card{margin:0}
+.home-grid .h-form{grid-column:1/-1}
+.form-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}
+.form-cols>div>label:first-child{margin-top:0}
+.form-acoes{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid var(--bord)}
+@media(max-width:820px){.form-cols{grid-template-columns:1fr}.form-cols>div+div>label:first-child{margin-top:16px}}
+@media(max-width:820px){.home-grid{grid-template-columns:1fr}.home-grid>.card{grid-column:1!important}}
+details.dobra>summary h2{display:flex;align-items:center;gap:8px}details.dobra>summary h2 .ic{width:20px;height:20px}
+.dobra-acoes{display:flex;align-items:center;gap:6px;color:var(--mut);flex:none}
+.dobra-acoes button{white-space:nowrap}
+details.dobra[open] .avulso-fechado{display:none}
+details.dobra:not([open]){padding-top:16px;padding-bottom:16px}
+
+/* card do Servir ativo */
+.card.destaque{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-color:var(--lima-b);background:linear-gradient(0deg,var(--lima-a),var(--lima-a)),var(--card)}
+.card.destaque h2{margin:0;font-size:1.35rem}.card.destaque p{margin:4px 0 0}
+
+/* formulario recolhivel */
+details.dobra>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;border-radius:var(--r)}
+details.dobra>summary::-webkit-details-marker{display:none}
+details.dobra>summary h2{margin:0}
+details.dobra>summary .seta{color:var(--mut);transition:transform .25s var(--sai)}
+details.dobra[open]>summary{margin-bottom:.9rem}
+details.dobra[open]>summary .seta{transform:rotate(180deg)}
+details.dobra>summary:focus-visible{outline:2px solid var(--lima);outline-offset:4px}
+
+/* campo so de leitura (pasta local): caminho encurtado */
+.campo-lido{display:flex;align-items:center;gap:8px;min-height:46px;padding:10px 14px;border-radius:var(--r);border:1px solid var(--bord);background:var(--bg2);font-family:var(--f-mono);font-size:.84rem;overflow:hidden}
+.campo-lido.sem-valor{font-family:var(--f-texto);font-size:inherit;color:var(--fraco)}
+.campo-lido span{overflow-wrap:normal;word-break:normal;min-width:0}
+.campo-lido .ic{color:var(--mut)}
+
+/* estados vazios */
+.vazio{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:14px 8px}
+.vazio p{margin:0}.card.vazio h2{margin:6px 0 0}
+
+/* passo 1: volumes como cards */
+.volumes{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin:10px 0}
+.volumes:empty{display:none}
+button.volume{justify-content:flex-start;text-align:left;gap:12px;padding:12px 14px;border-radius:var(--r);background:var(--card2)}
+button.volume>.ic{width:26px;height:26px;color:var(--mut)}
+button.volume span{display:flex;flex-direction:column;min-width:0}
+button.volume b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button.volume small{color:var(--mut);font-weight:500;font-size:.78rem;font-variant-numeric:tabular-nums}
+button.volume.sel{border-color:var(--lima);background:var(--lima-a)}button.volume.sel>.ic{color:var(--lima)}
+.previa{min-height:1.4em;margin:6px 0 0;font-variant-numeric:tabular-nums}
+.checks{margin-top:4px}
+button.stp{background:none;border:0;padding:0;border-radius:12px;font:inherit;color:var(--mut);cursor:pointer}
+button.stp:hover:not(:disabled){transform:none;background:none}button.stp:hover span{background:var(--lima-a)}
+
+/* passo 2: voluntarios como chips de escolha */
+.chips.escolha{margin:0}
+.chips.escolha .chip{padding:8px 15px;font-size:.9rem}
+.chips.escolha .chip.sel{font-weight:700}
+
+/* caminho: quebra so depois das barras */
+.path{overflow-wrap:normal;word-break:normal}
+.espaco{margin:6px 0 0;font-variant-numeric:tabular-nums}
+
+/* passo 4 */
+.copiando{display:flex;justify-content:center;margin:4px 0 -2px}
+#pg-t{margin:10px 0 0;font-weight:600}
+.arquivo-atual{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.3em;margin:2px 0 0;font-family:var(--f-mono)}
+
+/* passo 5: hierarquia clara */
+.fim{position:relative;display:flex;align-items:center;gap:14px;margin:4px 0 16px}
+.fim p{margin:0}
+button.largo{width:100%;margin-top:8px}
+.terciarios{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:14px 0 0}
+/* "Novo descarregamento": proximo passo de quem tem outro cartao, entao fica com contorno (mais visivel que "Abrir pasta") */
+#b-novo{border-color:var(--lima-b)}#b-novo .ic{color:var(--lima)}#b-novo:hover:not(:disabled){background:var(--lima-a);border-color:var(--lima)}
+button.fantasma{background:transparent;border-color:transparent;color:var(--mut);padding:8px 6px;font-weight:600}
+button.fantasma:hover:not(:disabled){background:transparent;border-color:transparent;color:var(--txt);transform:none}
+.secao-drive{margin-top:22px;padding-top:6px;border-top:1px solid var(--bord)}
+
+/* historico */
+.busca{position:relative;max-width:360px;margin:0 0 6px}
+.busca .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--fraco);pointer-events:none}
+.busca input[type=text]{padding-left:40px}
+.h-grupo{margin-top:18px}.h-grupo h3{margin-top:0;letter-spacing:.1em}
+.h-grupo .item .t{display:flex;flex-direction:column;gap:2px}
+.pd-h>span{display:flex;align-items:center;gap:6px}
+.chip.menos{padding:1px 8px;margin-left:4px;color:var(--lar);border-color:rgba(255,176,32,.35);background:rgba(255,176,32,.08)}
+.rodape-lista{margin-top:22px;padding-top:14px;border-top:1px solid var(--bord)}
+button.link-perigo{background:transparent;border-color:transparent;color:var(--verm);padding:6px 4px;font-weight:600}
+button.link-perigo:hover:not(:disabled){background:transparent;border-color:transparent;text-decoration:underline;transform:none}
+
+/* alerta informativo */
+.aviso-info{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;margin:0 0 18px;border-radius:var(--r);border:1px solid rgba(112,208,104,.35);background:var(--lima-a);color:var(--txt)}
+.aviso-info .ic{color:var(--lima);margin-top:2px}
+.aviso-info.erro{border-color:rgba(255,90,71,.5);background:var(--verm-a)}.aviso-info.erro .ic{color:var(--verm)}
+
+/* conta Google */
+.campo-senha{position:relative}.campo-senha input{padding-right:52px}
+.campo-senha button{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:7px;border:0;background:transparent;color:var(--mut)}
+.campo-senha button:hover:not(:disabled){background:rgba(255,255,255,.06);transform:translateY(-50%);color:var(--txt)}
+.arquivo{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.card.travado>*:not(h2):not(.motivo){opacity:.45;pointer-events:none}
+.conta-ok{display:flex;align-items:center;gap:8px;font-weight:600}.conta-ok:empty{display:none}
+
+/* predefinicoes: chips editaveis e arrastaveis */
+.chip.arrasta{cursor:grab;padding-left:8px;gap:4px}
+.chip.arrasta.arrastando{opacity:.4}.chip.arrasta.alvo{border-color:var(--lima)}
+.chip .pega{color:var(--fraco);font-size:.7rem;letter-spacing:-2px;margin-right:2px}
+.chip-nome{border:0;background:transparent;padding:0 2px;font:inherit;font-weight:500;color:var(--txt);border-radius:6px}
+.chip-nome:hover:not(:disabled){background:transparent;text-decoration:underline;transform:none}
+input.chip-edita{width:auto;min-width:80px;padding:2px 6px;border-radius:6px;font-size:.84rem}
+
+/* aviso fixo de reinicio (no lugar da faixa amarela) */
+.aviso-fixo{position:fixed;left:16px;bottom:16px;z-index:70;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:10px 12px 10px 16px;border-radius:var(--r2);
+ background:var(--card2);border:1px solid var(--bord2);box-shadow:0 18px 40px -14px rgba(0,0,0,.8);animation:toast .42s var(--sai)}
+.aviso-fixo>.ic{color:var(--lar)}
+
+/* ---------- mascote (a caixa do logo) ----------
+   so transform e opacity, em @keyframes, e so em elementos de HTML (corpo, olhos, fotos): tudo vai para a composicao,
+   sem layout nem pintura por quadro. O SVG e so o desenho parado (o mesmo do logo, sem os olhos). */
+.mascote{position:relative;display:inline-block;flex:none;width:var(--m);height:var(--m);line-height:0}
+.m-corpo{position:absolute;inset:0;transform-origin:50% 92%}
+.m-corpo>svg{display:block;width:100%;height:100%;overflow:visible}
+.m-olhos{position:absolute;inset:0}
+.m-olho{position:absolute;left:49.9%;top:51.4%;width:14.1%;height:23.5%;border-radius:50%;background:#fdfdfd}
+.m-olho+.m-olho{left:70.4%;top:47.4%}
+.m-foto{position:absolute;left:36%;top:-4%;width:26%;height:19%;border-radius:3px;background:var(--menta);box-shadow:inset 0 0 0 1.5px var(--teal);opacity:0;z-index:1}
+.m-foto:nth-of-type(2){left:28%}.m-foto:nth-of-type(3){left:46%}
+.m-espera .m-olhos{animation:m-olhar 6s ease-in-out infinite}
+.m-espera .m-olho{animation:m-piscar 4s infinite}
+.m-achou .m-corpo{animation:dh-pulinho .9s var(--sai)}
+.m-achou .m-olho{animation:m-arregala .9s var(--sai)}
+.m-recebendo .m-corpo{animation:m-engole .4s ease-in-out infinite}
+.m-recebendo .m-olhos,.m-enviando .m-olhos{translate:0 -4.6%}
+.m-recebendo .m-foto{animation:m-cai 1.2s cubic-bezier(.5,0,.8,.4) infinite}
+.m-enviando .m-foto{animation:m-sobe 1.2s cubic-bezier(.2,.6,.4,1) infinite}
+.m-foto:nth-of-type(2){animation-delay:.4s!important}.m-foto:nth-of-type(3){animation-delay:.8s!important}
+.m-feliz .m-olho{scale:1.05 .7}
+.m-feliz-pula .m-corpo{animation:dh-pulinho .9s var(--sai)}
+.m-feliz-pula .m-olho{animation:dh-apertar .9s ease-in-out}
+.m-erro .m-corpo{animation:m-treme .1s linear 3}
+.m-erro .m-olhos{translate:0 3%}.m-erro .m-olho{scale:1 .5}
+.m-dormindo{opacity:.6;filter:grayscale(1)}
+.m-dormindo .m-corpo{animation:m-respira 3s ease-in-out infinite}
+.m-dormindo .m-olho{scale:1 .1}
+.modal .mascote{margin:-4px 0 10px}
+@keyframes m-olhar{0%,15%,85%,100%{translate:0 0}30%,45%{translate:-4.6% .8%}60%,75%{translate:4% .5%}}
+@keyframes m-piscar{0%,46%,54%,100%{scale:1 1}50%{scale:1 .08}}
+@keyframes m-arregala{0%,100%{scale:1 1}25%,60%{scale:1.15 1.15}}
+@keyframes m-engole{0%,100%{transform:none}50%{transform:scale(1.03,.94)}}
+@keyframes m-cai{0%{opacity:0;transform:translateY(-110%)}20%{opacity:1}75%{opacity:1}100%{opacity:0;transform:translateY(150%)}}
+@keyframes m-sobe{0%{opacity:0;transform:translateY(150%)}25%{opacity:1}100%{opacity:0;transform:translateY(-120%)}}
+@keyframes m-treme{0%,100%{transform:none}25%{transform:translateX(-5%)}75%{transform:translateX(5%)}}
+@keyframes m-respira{0%,100%{transform:none}50%{transform:scale(1.03)}}
+#uploads .uphead .mascote{margin:-4px 0 -2px}
+#uploads .up-pe{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#uploads .up-parar{flex:none;padding:4px 10px;font-size:.76rem}#uploads .up-parar .ic{width:13px;height:13px}
+#uploads .up-parar:hover:not(:disabled){color:var(--verm);border-color:rgba(255,90,71,.5)}
+#uploads .up-todos{padding-top:8px;border-top:1px solid var(--bord)}#uploads .up-todos button{width:100%}
+.upjob.parado .ic.st{color:var(--mut)}.upjob.parado progress::-webkit-progress-value{background:var(--fraco);animation:none}
+/* confete: 6 pedacinhos, tirados do DOM em 1 s */
+.confete{position:absolute;left:32px;top:30px;width:0;height:0;pointer-events:none}
+.confete i{position:absolute;width:8px;height:8px;border-radius:2px;background:var(--lima);animation:m-confete 1s var(--sai) forwards}
+.confete i:nth-child(even){background:var(--menta)}.confete i:nth-child(3n){background:var(--lar)}
+@keyframes m-confete{from{transform:rotate(var(--a)) translateY(0) scale(1);opacity:1}to{transform:rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(.6);opacity:0}}
+/* aba escondida: tudo parado; editor e selecao abertos: o logo nao pula atras deles */
+body.pausado .mascote *,body.pausado .simbolo *,body.pausado .wordmark,body.tela-cheia .simbolo *,body.tela-cheia .wordmark{animation-play-state:paused!important}
+/* logo parado (3 ciclos sem ninguem mexer): nada anima, nem os olhos; o mouse e o clique continuam funcionando */
+.simbolo.quieto .dh-caixa,.simbolo.quieto .dh-olhos,.simbolo.quieto .dh-olho,.simbolo.quieto+.wordmark{animation:none}
+@media(prefers-reduced-motion:reduce){.mascote,.mascote *,.confete{animation:none!important}}
