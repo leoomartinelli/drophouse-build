@@ -258,11 +258,6 @@ input[type=checkbox]:checked:disabled{opacity:.45}
 .rev .bar .info{flex:1;min-width:160px;text-align:center}
 .rev .bar .info b{font-family:var(--f-titulo);font-weight:400;font-size:1.05rem;letter-spacing:.04em;text-transform:uppercase}
 .rev .stage{flex:1;overflow:hidden;position:relative;min-height:0;touch-action:none;cursor:zoom-in}
-/* cantos de visor sobre a foto */
-.rev:not(.ed) .stage::after{content:"";position:absolute;inset:16px;pointer-events:none;z-index:1;border:2px solid rgba(244,244,239,.5);border-radius:22px;transition:border-color .25s;
- -webkit-mask:linear-gradient(#000 0 0),linear-gradient(#000 0 0) center/calc(100% - 72px) calc(100% + 8px) no-repeat,linear-gradient(#000 0 0) center/calc(100% + 8px) calc(100% - 72px) no-repeat;
- -webkit-mask-composite:xor;mask:linear-gradient(#000 0 0),linear-gradient(#000 0 0) center/calc(100% - 72px) calc(100% + 8px) no-repeat,linear-gradient(#000 0 0) center/calc(100% + 8px) calc(100% - 72px) no-repeat;mask-composite:exclude}
-.rev .stage.desc::after{border-color:var(--verm)}
 .rev .stage.zoom{cursor:grab}.rev .stage.arrastando{cursor:grabbing}
 .rev .stage img{position:absolute;max-width:none;max-height:none;user-select:none;-webkit-user-drag:none;transition:opacity .2s,filter .2s}
 .rev .zgrupo{display:flex;gap:2px}.rev .zgrupo #r-zt{min-width:110px;font-variant-numeric:tabular-nums}
