@@ -5,6 +5,7 @@
 - Salvar: revela a foto em tamanho cheio no lugar dela (RAW vira JPEG). A original vai para a pasta oculta
   `.originais` ao lado, com os ajustes em `<foto editada>.ajustes.json`: da para continuar editando ou restaurar.
 - Os salvamentos rodam em segundo plano, um por vez; o envio ao Drive espera terminarem.
+- Perfis criativos (tabelas de cor .cube em app/luts, ex.: os dos presets prontos) vao como "perfil" nos ajustes.
 Foto sem nenhum ajuste nunca e regravada."""
 import hashlib
 import json
@@ -56,14 +57,55 @@ _worker = None
 # ---------- ajustes ----------
 
 CANAIS_CURVA = ("master", "red", "green", "blue")     # curva de pontos: RGB e cada cor
-GRUPOS = {"luz": "Luz", "curva": "Curva de tons", "cor": "Cor (inclui equilíbrio de branco)",
+GRUPOS = {"luz": "Luz", "curva": "Curva de tons", "cor": "Cor (equilíbrio de branco e perfil)",
           "corte": "Corte e endireitar"}                                            # para copiar/colar
 CORTE_INTEIRO = [0.0, 0.0, 1.0, 1.0]
 
 
 def ajustes_padrao():
     return {"valores": {c: v[4] for c, v in CONTROLES.items() if v[4] is not None}, "wb": {"modo": "asShot"},
-            "curva": {}, "corte": None}
+            "curva": {}, "corte": None, "perfil": None}
+
+
+# ---------- perfis criativos (LUT .cube) ----------
+PASTA_LUTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "luts")
+
+
+def perfis():
+    """[{"lut": arquivo, "nome": TITLE do .cube}] dos perfis que vem com o programa."""
+    saida = []
+    try:
+        arquivos = sorted(a for a in os.listdir(PASTA_LUTS) if a.lower().endswith(".cube"))
+    except OSError:
+        return []
+    for a in arquivos:
+        nome = os.path.splitext(a)[0].replace("-", " ").title()
+        try:
+            with open(os.path.join(PASTA_LUTS, a), encoding="utf-8") as f:
+                for linha in f:
+                    if linha.startswith("TITLE"):
+                        nome = linha.split(None, 1)[1].strip().strip('"') or nome
+                        break
+                    if linha[:1].isdigit():
+                        break
+        except OSError:
+            continue
+        saida.append({"lut": a, "nome": nome})
+    return saida
+
+
+def _perfil(p):
+    """{"lut": arquivo em app/luts, "intensidade": 0..200 (%)}; sem perfil (ou intensidade 0) vira None."""
+    if not isinstance(p, dict) or not isinstance(p.get("lut"), str):
+        return None
+    lut = os.path.basename(p["lut"])
+    if lut != p["lut"] or not lut.lower().endswith(".cube") or not os.path.isfile(os.path.join(PASTA_LUTS, lut)):
+        return None
+    try:
+        intensidade = min(200.0, max(0.0, float(p.get("intensidade", 100))))
+    except (TypeError, ValueError):
+        intensidade = 100.0
+    return {"lut": lut, "intensidade": round(intensidade, 1)} if intensidade > 0 else None
 
 
 def _corte(c):
@@ -111,7 +153,7 @@ def limpar(aj):
     modo = wb.get("modo") if wb.get("modo") in MODOS_WB else "asShot"
     curva = {c: _pontos((aj.get("curva") or {}).get(c)) for c in CANAIS_CURVA}
     saida = {"valores": valores, "wb": {"modo": modo}, "curva": {c: p for c, p in curva.items() if p},
-             "corte": _corte(aj.get("corte"))}
+             "corte": _corte(aj.get("corte")), "perfil": _perfil(aj.get("perfil"))}
     # os modos prontos (Tungstenio, Nublado...) tambem levam temperatura e matiz: o LightCraft revela pelos numeros,
     # o modo e so o nome. "Como fotografado" usa os da propria foto.
     if modo != "asShot" and wb.get("temp") is not None:
@@ -124,7 +166,7 @@ def limpar(aj):
 
 def e_padrao(aj):
     aj = limpar(aj)
-    return aj["wb"]["modo"] == "asShot" and not aj["curva"] and not aj["corte"] and \
+    return aj["wb"]["modo"] == "asShot" and not aj["curva"] and not aj["corte"] and not aj["perfil"] and \
         all(abs(v - CONTROLES[c][4]) < 1e-9 for c, v in aj["valores"].items())
 
 
@@ -196,6 +238,8 @@ def _rodar(args, entrada=None):
 
 
 def _render(origem, destino, aj, lado=None, qualidade=QUALIDADE):
+    if limpar(aj)["perfil"]:
+        return _render_com_perfil(origem, destino, limpar(aj), lado, qualidade)
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
         json.dump(para_lightcraft(aj), f)
         arq = f.name
@@ -206,6 +250,31 @@ def _render(origem, destino, aj, lado=None, qualidade=QUALIDADE):
         _rodar(args)
     finally:
         os.remove(arq)
+
+
+_ids_perfil = {}          # arquivo .cube -> id que o LightCraft da ao importar (ex.: "lut:imported-lareira")
+
+
+def _id_perfil(lut):
+    if lut not in _ids_perfil:
+        r = json.loads(_rodar(["run", "--demo", "profile.import", json.dumps({"paths": [os.path.join(PASTA_LUTS, lut)]})
+                               ]).splitlines()[0])["result"]
+        if not r.get("imported"):
+            raise RuntimeError(f"perfil {lut} não pôde ser carregado: {r.get('failed')}")
+        _ids_perfil[lut] = r["imported"][0]["id"]
+    return _ids_perfil[lut]
+
+
+def _render_com_perfil(origem, destino, aj, lado, qualidade):
+    """O perfil (LUT) so existe dentro de uma execucao do motor: importa, aplica e exporta na mesma.
+    lado=None: tamanho cheio (o app.export sozinho reduziria para 3000 px)."""
+    lut = aj["perfil"]["lut"]
+    _comandos(origem, [
+        ("profile.import", {"paths": [os.path.join(PASTA_LUTS, lut)]}),
+        ("develop.merge", {"settings": para_lightcraft(aj)}),
+        ("develop.profile", {"id": _id_perfil(lut), "amount": aj["perfil"]["intensidade"]}),
+        ("app.export", {"path": destino, "longEdge": int(lado or 0), "quality": int(qualidade), "conflict": "overwrite"}),
+    ])
 
 
 def _comandos(origem, comandos):
@@ -312,6 +381,7 @@ def mesclar(base, copiados, grupos):
     if "curva" in grupos:
         novo["curva"] = copiados["curva"]
     novo["corte"] = copiados["corte"] if "corte" in grupos else base["corte"]
+    novo["perfil"] = copiados["perfil"] if "cor" in grupos else base["perfil"]      # perfil faz parte da Cor
     return limpar(novo)
 
 
@@ -322,28 +392,49 @@ def aplicar_em(fotos, copiados, grupos):
 
 
 ARQ_PREDEFINICOES = os.path.join(core.DATA_DIR, "predefinicoes_edicao.json")
+# presets prontos: vao junto do programa e aparecem no editor. Para adicionar um, crie no editor ("Salvar ajustes
+# atuais") e copie o item de data/predefinicoes_edicao.json para este arquivo (com uma "descricao").
+ARQ_PRONTAS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "predefinicoes_prontas.json")
+
+
+def _ler_predefinicoes(arquivo, pronta):
+    dados = core.ler_json(arquivo, [])
+    return [{"nome": str(p["nome"])[:60], "descricao": str(p.get("descricao") or "")[:200], "pronta": pronta,
+             "ajustes": limpar(p.get("ajustes"))}
+            for p in (dados if isinstance(dados, list) else []) if isinstance(p, dict) and p.get("nome")]
+
+
+def predefinicoes_prontas():
+    return _ler_predefinicoes(ARQ_PRONTAS, True)
+
+
+def _do_usuario():
+    return _ler_predefinicoes(ARQ_PREDEFINICOES, False)
 
 
 def predefinicoes():
-    dados = core.ler_json(ARQ_PREDEFINICOES, [])
-    return [{"nome": p["nome"], "ajustes": limpar(p.get("ajustes"))} for p in dados if isinstance(p, dict) and p.get("nome")]
+    """As prontas (na ordem do arquivo) e depois as salvas neste computador."""
+    return predefinicoes_prontas() + _do_usuario()
 
 
 def salvar_predefinicao(nome, aj):
     nome = (nome or "").strip()[:60]
     if not nome:
         raise ValueError("Dê um nome para a predefinição.")
-    lista = [p for p in predefinicoes() if p["nome"].lower() != nome.lower()]
+    if any(p["nome"].lower() == nome.lower() for p in predefinicoes_prontas()):
+        raise ValueError(f'"{nome}" é o nome de um preset pronto. Escolha outro nome.')
+    lista = [p for p in _do_usuario() if p["nome"].lower() != nome.lower()]
     lista.append({"nome": nome, "ajustes": limpar(aj)})
     lista.sort(key=lambda p: p["nome"].lower())
-    core.gravar_json(ARQ_PREDEFINICOES, lista)
-    return lista
+    core.gravar_json(ARQ_PREDEFINICOES, [{"nome": p["nome"], "ajustes": p["ajustes"]} for p in lista])
+    return predefinicoes()
 
 
 def excluir_predefinicao(nome):
-    lista = [p for p in predefinicoes() if p["nome"] != nome]
-    core.gravar_json(ARQ_PREDEFINICOES, lista)
-    return lista
+    """So apaga as salvas neste computador (as prontas vem com o programa)."""
+    lista = [p for p in _do_usuario() if p["nome"] != nome]
+    core.gravar_json(ARQ_PREDEFINICOES, [{"nome": p["nome"], "ajustes": p["ajustes"]} for p in lista])
+    return predefinicoes()
 
 
 def curvas_prontas():
@@ -480,6 +571,14 @@ def salvar(foto, aj):
             _worker.start()
 
 
+def cancelar(foto):
+    """A foto vai ser apagada (selecao): tira da fila o que ainda nao comecou a salvar."""
+    with _lock_fila:
+        foto = _atual(foto)
+        _ultimo.pop(foto, None)
+        SALVANDO.pop(foto, None)
+
+
 def _trabalhar():
     while True:
         try:
@@ -489,6 +588,9 @@ def _trabalhar():
         with _lock_fila:
             aj = _ultimo.pop(foto, None)
         if aj is None:
+            continue
+        if not os.path.exists(_atual(foto)):          # apagada na selecao enquanto esperava
+            SALVANDO.pop(foto, None)
             continue
         try:
             nova = salvar_agora(_atual(foto), aj)

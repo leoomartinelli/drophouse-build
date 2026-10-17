@@ -225,13 +225,49 @@ def test_colar_so_os_grupos_escolhidos():
 def test_predefinicoes_com_nome():
     for p in editor.predefinicoes():
         editor.excluir_predefinicao(p["nome"])
+    minhas = lambda r: [p for p in r.json()["predefinicoes"] if not p["pronta"]]  # noqa: E731
     r = local.post("/api/editor-predefinicoes", json={"nome": "Louvor palco", "ajustes": {"valores": {"light.exposure": 0.7}}})
-    assert [p["nome"] for p in r.json()["predefinicoes"]] == ["Louvor palco"]
+    assert [p["nome"] for p in minhas(r)] == ["Louvor palco"]
     local.post("/api/editor-predefinicoes", json={"nome": "louvor PALCO", "ajustes": {"valores": {"light.exposure": 0.3}}})
-    lista = local.get("/api/editor-predefinicoes").json()
-    assert len(lista["predefinicoes"]) == 1 and lista["predefinicoes"][0]["ajustes"]["valores"]["light.exposure"] == 0.3
+    lista = minhas(local.get("/api/editor-predefinicoes"))
+    assert len(lista) == 1 and lista[0]["ajustes"]["valores"]["light.exposure"] == 0.3
     assert local.post("/api/editor-predefinicoes", json={"nome": "  "}).status_code == 400
-    assert local.delete("/api/editor-predefinicoes", params={"nome": "louvor PALCO"}).json()["predefinicoes"] == []
+    assert minhas(local.delete("/api/editor-predefinicoes", params={"nome": "louvor PALCO"})) == []
+
+
+def test_presets_prontos_vem_com_o_programa():
+    prontas = editor.predefinicoes_prontas()
+    assert prontas and all(p["pronta"] and p["descricao"] for p in prontas)
+    with open(editor.ARQ_PRONTAS, encoding="utf-8") as f:
+        brutas = json.load(f)
+    for bruta, p in zip(brutas, prontas):              # nenhum controle digitado errado ou fora da faixa
+        assert p["ajustes"]["valores"] == bruta["ajustes"]["valores"], p["nome"]
+        assert not editor.e_padrao(p["ajustes"]) and p["ajustes"]["corte"] is None
+    nome = prontas[0]["nome"]
+    lista = local.get("/api/editor-predefinicoes").json()["predefinicoes"]
+    assert lista[0] == prontas[0]                     # o editor mostra os prontos primeiro
+    # nao da para sobrescrever nem excluir um preset pronto
+    assert local.post("/api/editor-predefinicoes", json={"nome": nome.upper(), "ajustes": {}}).status_code == 400
+    local.delete("/api/editor-predefinicoes", params={"nome": nome})
+    assert any(p["nome"] == nome and p["pronta"] for p in editor.predefinicoes())
+
+
+def test_foto_apagada_sai_da_fila_do_preset(monkeypatch, tmp_path):
+    reveladas = []
+    monkeypatch.setattr(editor, "salvar_agora", lambda foto, aj: reveladas.append(foto) or foto)
+    fotos = [str(tmp_path / f"f{k}.jpg") for k in range(3)]
+    for f in fotos:
+        Image.new("RGB", (20, 20)).save(f)
+    E.arquivos_transferidos = list(fotos)
+    with editor._lock_fila:                           # segura o salvamento ate a "selecao" apagar uma foto
+        editor._ultimo.update({f: {} for f in fotos})
+        for f in fotos:
+            editor.SALVANDO[f] = "salvando"
+            editor._fila.put(f)
+    editor.cancelar(fotos[1])
+    os.remove(fotos[2])                               # apagada antes de chegar a vez dela
+    editor._trabalhar()
+    assert reveladas == [fotos[0]] and editor.pendentes() == 0
 
 
 @motor
@@ -264,6 +300,22 @@ def test_colar_em_varias_fotos():
     aj = local.get("/api/editor/2").json()["ajustes"]["valores"]
     assert aj["light.exposure"] == 0.8 and aj["color.saturation"] == 0          # so o grupo Luz foi colado
     assert os.path.exists(os.path.join(os.path.dirname(fotos[1]), ".originais", os.path.basename(fotos[1])))
+
+
+@motor
+def test_preset_em_todas_as_fotos_mantem_o_corte():
+    # o botao "Aplicar em todas" do editor manda o preset com os grupos Luz, Curva e Cor
+    descarregar(2)
+    corte = {"rect": [0.1, 0.1, 0.9, 0.9], "angulo": 0, "proporcao": "livre"}
+    local.post("/api/editor/0/salvar", json={"ajustes": {"corte": corte}})
+    esperar_salvar()
+    pb = next(p for p in editor.predefinicoes_prontas() if p["nome"] == "Preto e branco")
+    r = local.post("/api/editor/aplicar", json={"indices": [0, 1], "ajustes": pb["ajustes"], "grupos": ["luz", "curva", "cor"]})
+    assert r.json() == {"ok": True, "fotos": 2}
+    esperar_salvar()
+    aj = local.get("/api/editor/0").json()["ajustes"]
+    assert aj["valores"]["color.saturation"] == -100 and aj["corte"]["rect"] == corte["rect"]
+    assert local.get("/api/editor/1").json()["ajustes"]["valores"] == pb["ajustes"]["valores"]
 
 
 @motor
@@ -315,3 +367,84 @@ def test_endireitar_nao_deixa_canto_vazio():
     assert 0.05 < x0 < 0.2 and 0.8 < x1 < 0.95 and d["rect"] == d["maximo"] and d["angulo"] == 10
     fora = local.post("/api/editor/0/corte", json={"rect": [-0.3, 0.1, 0.6, 0.9], "angulo": 0}).json()
     assert fora["rect"][0] == 0.0 and fora["maximo"] == [0.0, 0.0, 1.0, 1.0]
+
+
+# ---------- perfis criativos (LUT .cube) ----------
+
+def test_perfil_validado():
+    lut = editor.perfis()[0]["lut"]
+    assert editor.limpar({"perfil": {"lut": lut, "intensidade": 999}})["perfil"] == {"lut": lut, "intensidade": 200.0}
+    assert editor.limpar({"perfil": {"lut": lut}})["perfil"] == {"lut": lut, "intensidade": 100.0}
+    assert editor.limpar({"perfil": {"lut": lut, "intensidade": 0}})["perfil"] is None
+    for ruim in ("../../etc/passwd", "/etc/passwd", "nao-existe.cube", "luts/" + lut, 5):
+        assert editor.limpar({"perfil": {"lut": ruim}})["perfil"] is None
+    assert not editor.e_padrao({"perfil": {"lut": lut}})
+    # o perfil faz parte do grupo Cor no copiar/colar
+    assert editor.mesclar({}, {"perfil": {"lut": lut}}, ["cor"])["perfil"]["lut"] == lut
+    assert editor.mesclar({"perfil": {"lut": lut}}, {}, ["luz"])["perfil"]["lut"] == lut
+
+
+def test_presets_da_casa_usam_perfis_do_programa():
+    luts = {p["lut"] for p in editor.perfis()}
+    com_perfil = [p for p in editor.predefinicoes_prontas() if p["ajustes"]["perfil"]]
+    assert len(com_perfil) >= 4 and all(p["ajustes"]["perfil"]["lut"] in luts for p in com_perfil)
+    assert local.get("/api/editor").json()["perfis"] == editor.perfis()
+
+
+def test_conversor_de_perfil_do_lightroom(tmp_path):
+    """Monta um .xmp como o Lightroom grava (tabela em base85 da Adobe + zlib) e confere o .cube gerado."""
+    import importlib.util, struct, zlib
+    spec = importlib.util.spec_from_file_location("conv", os.path.join(os.path.dirname(__file__), "..", "packaging",
+                                                                      "converter_perfil_lightroom.py"))
+    conv = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(conv)
+    n = 5
+    alvo = np.random.default_rng(1).integers(0, 65536, (n, n, n, 3))
+    ident = (np.arange(n) * 0xFFFF + (n - 1) // 2) // (n - 1)
+    r, g, b = np.meshgrid(ident, ident, ident, indexing="ij")
+    deltas = ((alvo - np.stack([r, g, b], -1)) & 0xFFFF).astype("<u2")
+    dados = struct.pack("<4I", 1, 1, 3, n) + deltas.tobytes() + struct.pack("<3I2d", 0, 1, 0, 0.0, 2.0)
+    bruto = struct.pack("<I", len(dados)) + zlib.compress(dados)
+    texto = ""
+    for k in range(0, len(bruto), 4):
+        pedaco = bruto[k:k + 4]
+        v = struct.unpack("<I", pedaco.ljust(4, b"\0"))[0]
+        digs = []
+        for _ in range(5):
+            digs.append(conv.ALFABETO[v % 85])
+            v //= 85
+        texto += "".join(digs[:len(pedaco) + 1])
+    texto = texto.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+    xmp = tmp_path / "perfil.xmp"
+    xmp.write_text(f'<x crs:RGBTable="ABC" crs:Table_ABC="{texto}"/>', encoding="utf-8")
+    assert np.allclose(conv.tabela_do_xmp(str(xmp)), alvo / 65535)
+    cube = tmp_path / "p.cube"
+    conv.gravar_cube(conv.tabela_do_xmp(str(xmp)), str(cube), "Teste")
+    linhas = cube.read_text(encoding="utf-8").splitlines()
+    assert linhas[:2] == ['TITLE "Teste"', f"LUT_3D_SIZE {n}"] and len(linhas) == 4 + n ** 3
+    assert np.allclose([float(x) for x in linhas[5].split()], alvo[1, 0, 0] / 65535, atol=1e-6)   # vermelho varia primeiro
+
+
+@motor
+def test_preset_com_perfil_muda_a_foto():
+    descarregar(1)
+    casa = next(p for p in editor.predefinicoes_prontas() if p["ajustes"]["perfil"])
+    normal = brilho(local.get("/api/editor/0/previa", params={"aj": "{}", "lado": 300}).content)
+    previa = lambda i: local.get("/api/editor/0/previa", params={  # noqa: E731
+        "aj": json.dumps({**casa["ajustes"], "perfil": {**casa["ajustes"]["perfil"], "intensidade": i}}), "lado": 300})
+    assert previa(100).status_code == 200
+    cheio, metade = brilho(previa(100).content), brilho(previa(50).content)
+    assert abs(cheio - normal) > 1 and min(cheio, normal) - 0.5 <= metade <= max(cheio, normal) + 0.5
+    local.post("/api/editor/0/salvar", json={"ajustes": casa["ajustes"]})
+    esperar_salvar()
+    assert local.get("/api/editor/0").json()["ajustes"]["perfil"] == casa["ajustes"]["perfil"]
+
+
+@motor
+def test_perfil_revela_na_resolucao_original(tmp_path):
+    # o app.export do LightCraft reduz para 3000 px se nao receber longEdge=0
+    origem, destino = str(tmp_path / "grande.jpg"), str(tmp_path / "saida.jpg")
+    Image.new("RGB", (4000, 2600), (120, 140, 160)).save(origem, quality=90)
+    editor._render(origem, destino, {"perfil": {"lut": editor.perfis()[0]["lut"]}})
+    with Image.open(destino) as im:
+        assert im.size == (4000, 2600)

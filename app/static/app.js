@@ -670,7 +670,8 @@ function criarZoom(stage, img, aoMudar) {
 // A previa e revelada pelo proprio LightCraft (o que aparece e o que vai para o Drive). Ao trocar de foto ou concluir,
 // a foto editada e salva em tamanho cheio em segundo plano; a original fica guardada (botao "Restaurar original").
 // Tem zoom (com zoom a previa vem da original em tamanho cheio), curva de pontos, copiar/colar ajustes (inclusive em
-// varias fotos), predefinicoes com nome e desfazer/refazer.
+// varias fotos), presets (os prontos que vem com o programa e os salvos aqui; um clique aplica, outro leva para todas
+// as fotos) e desfazer/refazer.
 const ED_SECOES = [['luz', 'Luz'], ['curva', 'Curva de tons'], ['cor', 'Cor']];
 const ED_TRILHO = { 'wb.temp': 'trk-temp', 'wb.tint': 'trk-tint', 'color.vibrance': 'trk-vib', 'color.saturation': 'trk-sat' };
 const ED_CANAIS = [['master', 'RGB', '#e8e8e8'], ['red', 'Vermelho', '#ff5a5a'], ['green', 'Verde', '#5ad06a'], ['blue', 'Azul', '#5a8cff']];
@@ -752,11 +753,16 @@ async function abrirEditor(inicio = 0) {
   const aviso = t => { selo.textContent = t; selo.classList.toggle('hidden', !t); };
   const fmt = (c, x) => c === 'wb.temp' ? String(Math.round(x)) : (x > 0 ? '+' : '') + x.toFixed(C[c].passo < 1 ? 2 : 0).replace('.', ',');
   const valor = c => c === 'wb.temp' ? aj.wb.temp : c === 'wb.tint' ? aj.wb.tint : aj.valores[c];
-  const ajTexto = (a = aj) => JSON.stringify({ valores: a.valores, wb: a.wb, curva: a.curva, corte: a.corte || null });
-  const zerados = () => ({ valores: Object.fromEntries(Object.keys(C).filter(c => !c.startsWith('wb.')).map(c => [c, C[c].padrao])), wb: { modo: 'asShot', ...cf }, curva: {}, corte: null });
+  const ajTexto = (a = aj) => JSON.stringify({ valores: a.valores, wb: a.wb, curva: a.curva, corte: a.corte || null, perfil: a.perfil || null });
+  const zerados = () => ({ valores: Object.fromEntries(Object.keys(C).filter(c => !c.startsWith('wb.')).map(c => [c, C[c].padrao])), wb: { modo: 'asShot', ...cf }, curva: {}, corte: null, perfil: null });
   // ajustes de uma predefinicao/copia: o que nao veio fica no padrao; "Como fotografado" usa os numeros desta foto
   // predefinicao: o corte da foto fica como esta (enquadramento e de cada foto)
-  const completar = a => { const z = zerados(); return { valores: { ...z.valores, ...(a.valores || {}) }, wb: a.wb && a.wb.modo !== 'asShot' ? { ...a.wb } : z.wb, curva: JSON.parse(JSON.stringify(a.curva || {})), corte: aj ? aj.corte : null }; };
+  // compara luz, curva e cor sem depender da ordem dos campos (a foto salva volta do servidor em outra ordem)
+  const assinatura = a => JSON.stringify([Object.keys(C).filter(c => !c.startsWith('wb.')).map(c => a.valores[c] ?? C[c].padrao),
+    a.wb.modo === 'asShot' ? 'asShot' : [a.wb.modo, Math.round(a.wb.temp), Math.round(a.wb.tint)], ED_CANAIS.map(([c]) => (a.curva || {})[c] || []),
+    a.perfil ? [a.perfil.lut, +a.perfil.intensidade] : null]);
+  const presetAtivo = () => { if (!aj) return null; const s = assinatura(aj); return pre.predefinicoes.find(p => assinatura(completar(p.ajustes)) === s) || null; };
+  const completar = a => { const z = zerados(); return { valores: { ...z.valores, ...(a.valores || {}) }, wb: a.wb && a.wb.modo !== 'asShot' ? { ...a.wb } : z.wb, curva: JSON.parse(JSON.stringify(a.curva || {})), corte: aj ? aj.corte : null, perfil: a.perfil ? { ...a.perfil } : null }; };
 
   // --- desfazer / refazer (por foto, enquanto o editor estiver aberto) ---
   const hist = () => { if (!historico.has(i)) historico.set(i, { pilha: [ajTexto()], pos: 0 }); return historico.get(i); };
@@ -771,18 +777,22 @@ async function abrirEditor(inicio = 0) {
   // --- painel ---
   function painel() {
     const preds = pre.predefinicoes;
-    $('#e-painel').innerHTML = `<div class="ed-pre"><span>Predefinições</span><select id="e-pre"><option value="">${preds.length ? 'Aplicar uma predefinição…' : 'Nenhuma salva ainda'}</option>${preds.map((p, k) => `<option value="${k}">${esc(p.nome)}</option>`).join('')}</select>
+    $('#e-painel').innerHTML = `<div class="ed-pre"><span>Presets</span>
+      <div class="ed-presets">${preds.map((p, k) => `<button class="ed-pc" data-k="${k}" title="${esc(p.descricao || 'Clique para aplicar nesta foto')}"><b>${esc(p.nome)}${p.pronta ? '' : ' <i>salvo aqui</i>'}</b>${p.descricao ? `<small>${esc(p.descricao)}</small>` : ''}</button>`).join('') || '<p class="ed-dica">Nenhum preset ainda.</p>'}</div>
+      <button class="ib borda larga" id="e-pre-todas" title="Leva a luz e a cor do preset para todas as fotos (o corte de cada foto fica como está)" disabled>${edIc('varias')}<span>Aplicar em todas as fotos</span></button>
       <div class="ed-pre-b"><button class="ib borda" id="e-pre-salvar" title="Guarda os ajustes desta foto com um nome, para usar em outras fotos">${edIc('salvar')}<span>Salvar ajustes atuais</span></button>
-      <button class="ib borda" id="e-pre-excluir" title="Excluir uma predefinição" ${preds.length ? '' : 'disabled'}>${edIc('lixo')}</button></div></div>` +
+      <button class="ib borda" id="e-pre-excluir" title="Excluir um preset salvo neste computador (os prontos vêm com o programa)" ${preds.some(p => !p.pronta) ? '' : 'disabled'}>${edIc('lixo')}</button></div></div>` +
       ED_SECOES.map(([s, nome]) => `<button class="ed-sec ${fechadas.has(s) ? 'fechada' : ''}" data-s="${s}">${ic('baixo')}${nome}</button>
       <div class="ed-grupo ${fechadas.has(s) ? 'hidden' : ''}">${s === 'curva' ? `<div class="ed-curva"><div class="ed-curva-top"><select id="e-canal">${ED_CANAIS.map(([c, n]) => `<option value="${c}" ${c === canal ? 'selected' : ''}>${n}</option>`).join('')}</select>
         <select id="e-cpronta"><option value="">Curva pronta…</option>${pre.curvas.map((c, k) => `<option value="${k}">${esc(c.nome)}</option>`).join('')}</select></div>
         <canvas id="e-cv"></canvas><div class="ed-dica">Clique para criar um ponto · arraste · duplo clique no ponto remove</div><div class="ed-sub">Paramétrica</div></div>` : ''}
+      ${s === 'cor' && info.perfis.length ? `<div class="ed-wb"><span>Perfil criativo</span><select id="e-perfil"><option value="">Nenhum</option>${info.perfis.map(p => `<option value="${esc(p.lut)}">${esc(p.nome)}</option>`).join('')}</select></div>
+        <div class="ed-ctl" id="e-pint" title="Duplo clique: volta para 100%"><div class="ed-lin"><span>Intensidade do perfil</span><span class="ed-val"></span></div><input type="range" class="trk-centro" min="0" max="200" step="1"></div>` : ''}
       ${s === 'cor' ? `<div class="ed-wb"><span>Equilíbrio de branco</span><select id="e-wb">${Object.entries(info.modos_wb).map(([m, r]) => `<option value="${m}">${esc(r)}</option>`).join('')}</select><button class="ib" id="e-pick" title="Conta-gotas: clique num ponto que deveria ser cinza/branco (W)">${edIc('conta')}</button></div>` : ''}
       ${Object.keys(C).filter(c => C[c].secao === s).map(c => `<div class="ed-ctl" data-c="${c}" title="Duplo clique: volta ao padrão"><div class="ed-lin"><span>${esc(C[c].rotulo)}</span><span class="ed-val"></span></div>
         <input type="range" class="${ED_TRILHO[c] || 'trk-centro'}" ${c === 'wb.temp' ? 'min="0" max="1000" step="1"' : `min="${C[c].min}" max="${C[c].max}" step="${C[c].passo}"`}></div>`).join('')}</div>`).join('');
     $('#e-painel').querySelectorAll('.ed-sec').forEach(b => b.onclick = () => { const s = b.dataset.s; fechadas.has(s) ? fechadas.delete(s) : fechadas.add(s); painel(); if (aj) mostraValores(); });
-    $('#e-painel').querySelectorAll('.ed-ctl').forEach(d => {
+    $('#e-painel').querySelectorAll('.ed-ctl[data-c]').forEach(d => {
       const c = d.dataset.c, r = d.querySelector('input');
       r.oninput = () => {
         if (!aj) return;
@@ -805,16 +815,37 @@ async function abrirEditor(inicio = 0) {
       mudou();
     };
     $('#e-pick').onclick = () => contaGotas(!conta);
-    $('#e-pre').onchange = e => { const p = pre.predefinicoes[+e.target.value]; e.target.value = ''; if (!p || !aj) return; aj = completar(p.ajustes); mudou(); toast(`Predefinição "${p.nome}" aplicada`); $('#e-pre-excluir').dataset.k = ''; };
+    // perfil criativo (tabela de cor dos presets da casa) e a intensidade dele, de 0 a 200%
+    if ($('#e-perfil')) {
+      const pint = $('#e-pint'), r = pint.querySelector('input');
+      $('#e-perfil').onchange = e => { if (!aj) return; aj.perfil = e.target.value ? { lut: e.target.value, intensidade: aj.perfil ? aj.perfil.intensidade : 100 } : null; mudou(); };
+      r.oninput = () => { if (!aj || !aj.perfil) return; aj.perfil.intensidade = +r.value; mostraValores(); agendar(); };
+      r.onchange = registrar;
+      pint.ondblclick = () => { if (!aj || !aj.perfil) return; aj.perfil.intensidade = 100; mudou(); };
+    }
+    $('#e-painel').querySelectorAll('.ed-pc').forEach(b => b.onclick = () => {
+      const p = pre.predefinicoes[+b.dataset.k]; if (!p || !aj) return;
+      aj = completar(p.ajustes); mudou(); toast(`Preset "${p.nome}" aplicado nesta foto`);
+    });
+    $('#e-pre-todas').onclick = async () => {
+      const p = presetAtivo(); if (!p) return;
+      const outras = fotos.map((_, k) => k).filter(k => k !== i);
+      if (!outras.length) return toast('Só há esta foto.');
+      if (!await confirmar('Aplicar em todas', `Aplicar o preset "${p.nome}" nas outras ${outras.length} foto(s)?\n\nA luz e a cor de cada foto são trocadas pelas do preset; o corte fica como está. A original continua guardada (dá para restaurar).`, 'Aplicar', 'Cancelar')) return;
+      outras.forEach(k => { fotos[k].estado = 'salvando'; historico.delete(k); });
+      try { await api('/api/editor/aplicar', { body: { indices: outras, ajustes: p.ajustes, grupos: ['luz', 'curva', 'cor'] } }); toast(`Preset "${p.nome}" aplicado em ${outras.length + 1} foto(s); salvando em segundo plano`); }
+      catch (er) { toast(er.message, true); }
+      tira();
+    };
     $('#e-pre-salvar').onclick = async () => {
-      const nome = prompt('Nome da predefinição (ex.: Louvor palco):'); if (!nome || !aj) return;
-      try { pre.predefinicoes = (await api('/api/editor-predefinicoes', { body: { nome, ajustes: aj } })).predefinicoes; painel(); mostraValores(); toast(`Predefinição "${nome}" salva`); } catch (er) { toast(er.message, true); }
+      const nome = prompt('Nome do preset (ex.: Louvor palco):'); if (!nome || !aj) return;
+      try { pre.predefinicoes = (await api('/api/editor-predefinicoes', { body: { nome, ajustes: aj } })).predefinicoes; painel(); mostraValores(); toast(`Preset "${nome}" salvo`); } catch (er) { toast(er.message, true); }
     };
     $('#e-pre-excluir').onclick = async () => {
-      if (!pre.predefinicoes.length) return;
-      const nomes = pre.predefinicoes.map((p, k) => `${k + 1}. ${p.nome}`).join('\n');
-      const k = +prompt(`Qual predefinição excluir? Digite o número:\n\n${nomes}`) - 1, p = pre.predefinicoes[k]; if (!p) return;
-      if (!await confirmar('Excluir predefinição', `Excluir a predefinição "${p.nome}"?`, 'Excluir', 'Cancelar', true)) return;
+      const minhas = pre.predefinicoes.filter(p => !p.pronta); if (!minhas.length) return;
+      const nomes = minhas.map((p, k) => `${k + 1}. ${p.nome}`).join('\n');
+      const k = +prompt(`Qual preset excluir? Digite o número:\n\n${nomes}`) - 1, p = minhas[k]; if (!p) return;
+      if (!await confirmar('Excluir preset', `Excluir o preset "${p.nome}"?`, 'Excluir', 'Cancelar', true)) return;
       pre.predefinicoes = (await api('/api/editor-predefinicoes?nome=' + encodeURIComponent(p.nome), { method: 'DELETE' })).predefinicoes; painel(); mostraValores();
     };
     const cv = $('#e-cv');
@@ -833,13 +864,22 @@ async function abrirEditor(inicio = 0) {
     s.title = f.estado.startsWith('erro') ? f.estado : cls === 'alterado' ? 'As alterações são salvas sozinhas ao trocar de foto ou ao concluir' : '';
   }
   function mostraValores() {
-    $('#e-painel').querySelectorAll('.ed-ctl').forEach(d => {
+    $('#e-painel').querySelectorAll('.ed-ctl[data-c]').forEach(d => {
       const c = d.dataset.c, x = valor(c), r = d.querySelector('input');
       r.value = c === 'wb.temp' ? tPos(x) : x; d.querySelector('.ed-val').textContent = fmt(c, x);
       d.classList.toggle('mudou', c.startsWith('wb.') ? aj.wb.modo !== 'asShot' : x !== C[c].padrao);
     });
     const s = $('#e-wb'); if (s) s.value = aj.wb.modo;
+    const sp = $('#e-perfil'), pint = $('#e-pint');
+    if (sp) {
+      sp.value = aj.perfil ? aj.perfil.lut : ''; pint.classList.toggle('hidden', !aj.perfil);
+      if (aj.perfil) { pint.querySelector('input').value = aj.perfil.intensidade; pint.querySelector('.ed-val').textContent = Math.round(aj.perfil.intensidade) + '%'; pint.classList.toggle('mudou', aj.perfil.intensidade !== 100); }
+    }
     const p = $('#e-pick'); if (p) p.classList.toggle('ativo', conta);
+    // preset que bate com os ajustes desta foto fica destacado (e pode ser levado para todas)
+    const ativo = presetAtivo();
+    $('#e-painel').querySelectorAll('.ed-pc').forEach(b => b.classList.toggle('on', pre.predefinicoes[+b.dataset.k] === ativo));
+    const todas = $('#e-pre-todas'); if (todas) { todas.disabled = !ativo; todas.querySelector('span').textContent = ativo ? `Aplicar "${ativo.nome}" em todas` : 'Aplicar em todas as fotos'; }
     curva(); situacao();
   }
 
@@ -1039,7 +1079,7 @@ async function abrirEditor(inicio = 0) {
   function mesclar(base, copia, grupos) {
     const n = JSON.parse(ajTexto(base));
     Object.keys(C).filter(c => !c.startsWith('wb.') && grupos.includes(edGrupo(c))).forEach(c => { n.valores[c] = copia.valores[c] !== undefined ? copia.valores[c] : C[c].padrao; });
-    if (grupos.includes('cor')) n.wb = copia.wb.modo === 'asShot' ? { modo: 'asShot', ...cf } : { ...copia.wb };
+    if (grupos.includes('cor')) { n.wb = copia.wb.modo === 'asShot' ? { modo: 'asShot', ...cf } : { ...copia.wb }; n.perfil = copia.perfil ? { ...copia.perfil } : null; }
     if (grupos.includes('curva')) n.curva = JSON.parse(JSON.stringify(copia.curva || {}));
     if (grupos.includes('corte')) n.corte = copia.corte ? JSON.parse(JSON.stringify(copia.corte)) : null;
     return n;
@@ -1106,7 +1146,7 @@ async function abrirEditor(inicio = 0) {
     try {
       const d = await api(`/api/editor/${i}`); cf = d.como_fotografado;
       const a = d.ajustes;
-      aj = { valores: { ...a.valores }, wb: a.wb.modo === 'asShot' ? { modo: 'asShot', ...cf } : { ...a.wb }, curva: a.curva || {}, corte: a.corte || null };
+      aj = { valores: { ...a.valores }, wb: a.wb.modo === 'asShot' ? { modo: 'asShot', ...cf } : { ...a.wb }, curva: a.curva || {}, corte: a.corte || null, perfil: a.perfil || null };
       if (aj.wb.modo !== 'asShot' && aj.wb.modo !== 'custom' && aj.wb.temp === undefined) { try { const r = await api(`/api/editor/${i}/balanco`, { body: { modo: aj.wb.modo, ajustes: aj } }); aj.wb = { modo: aj.wb.modo, temp: r.temp, tint: r.tint }; } catch (e) { } }
       Object.keys(C).forEach(c => { if (!c.startsWith('wb.') && aj.valores[c] === undefined) aj.valores[c] = C[c].padrao; });
       salvo = ajTexto(); $('#e-rest').disabled = !d.editada; hist(); botoesHist(); mostraValores(); agendar();

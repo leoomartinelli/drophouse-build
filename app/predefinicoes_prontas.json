@@ -1,0 +1,137 @@
+[
+  {
+    "nome": "Casa Aberta",
+    "descricao": "O look da casa: tons creme e quentes, céu turquesa e verdes esmeralda.",
+    "ajustes": {
+      "valores": {},
+      "wb": {
+        "modo": "asShot"
+      },
+      "curva": {},
+      "perfil": {
+        "lut": "casa-aberta.cube",
+        "intensidade": 100
+      }
+    }
+  },
+  {
+    "nome": "Café na Cozinha",
+    "descricao": "Creme mais suave e fosco, com os pretos levemente lavados.",
+    "ajustes": {
+      "valores": {},
+      "wb": {
+        "modo": "asShot"
+      },
+      "curva": {},
+      "perfil": {
+        "lut": "cafe-na-cozinha.cube",
+        "intensidade": 100
+      }
+    }
+  },
+  {
+    "nome": "Lareira",
+    "descricao": "O mais quente da casa: tudo puxado para o âmbar.",
+    "ajustes": {
+      "valores": {},
+      "wb": {
+        "modo": "asShot"
+      },
+      "curva": {},
+      "perfil": {
+        "lut": "lareira.cube",
+        "intensidade": 100
+      }
+    }
+  },
+  {
+    "nome": "Quintal",
+    "descricao": "Creme com um toque verde-menta nos claros.",
+    "ajustes": {
+      "valores": {},
+      "wb": {
+        "modo": "asShot"
+      },
+      "curva": {},
+      "perfil": {
+        "lut": "quintal.cube",
+        "intensidade": 100
+      }
+    }
+  },
+  {
+    "nome": "Luz natural",
+    "descricao": "Fotos de dia ou em ambiente claro: recupera o céu, abre as sombras e realça um pouco as cores.",
+    "ajustes": {
+      "valores": {
+        "light.exposure": 0.15,
+        "light.contrast": 10,
+        "light.highlights": -35,
+        "light.shadows": 25,
+        "light.whites": 10,
+        "light.blacks": -5,
+        "color.vibrance": 15
+      },
+      "wb": {
+        "modo": "asShot"
+      },
+      "curva": {}
+    }
+  },
+  {
+    "nome": "Palco / Louvor",
+    "descricao": "Palco com luz forte e plateia escura: segura as luzes estouradas e clareia os rostos.",
+    "ajustes": {
+      "valores": {
+        "light.exposure": 0.3,
+        "light.contrast": 15,
+        "light.highlights": -55,
+        "light.shadows": 40,
+        "light.whites": -10,
+        "light.blacks": -10,
+        "color.vibrance": 20,
+        "color.saturation": 5
+      },
+      "wb": {
+        "modo": "asShot"
+      },
+      "curva": {}
+    }
+  },
+  {
+    "nome": "Suave",
+    "descricao": "Pessoas e retratos: menos contraste e pele mais delicada.",
+    "ajustes": {
+      "valores": {
+        "light.exposure": 0.1,
+        "light.contrast": -15,
+        "light.highlights": -20,
+        "light.shadows": 20,
+        "curve.highlights": -10,
+        "curve.shadows": 10,
+        "color.vibrance": 10,
+        "color.saturation": -5
+      },
+      "wb": {
+        "modo": "asShot"
+      },
+      "curva": {}
+    }
+  },
+  {
+    "nome": "Preto e branco",
+    "descricao": "Preto e branco com contraste.",
+    "ajustes": {
+      "valores": {
+        "light.contrast": 25,
+        "light.whites": 15,
+        "light.blacks": -15,
+        "color.saturation": -100
+      },
+      "wb": {
+        "modo": "asShot"
+      },
+      "curva": {}
+    }
+  }
+]

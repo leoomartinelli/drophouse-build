@@ -40,22 +40,25 @@ Para a conversão de RAW para JPEG, baixe o conversor uma vez: `python packaging
 `vendor/lightcraft/`; sem ele o programa só avisa que há RAW e copia no formato original).
 
 ## Versões e compilação
-- **Cada push na `main` que muda o programa vira uma versão nova** (`1.0.1`, `1.0.2`…) e os PCs se atualizam
-  sozinhos. Mudanças só em documentação, testes ou no workflow não geram versão. Regras em
+- **A versão só é compilada e publicada quando alguém pede**, para não gastar os minutos de Actions da organização:
+  no GitHub, *Actions → Compilar → Run workflow*, escolhendo a branch `main`. Push e pull request não disparam nada.
+  Se o programa mudou desde a última versão, sai a seguinte (`1.0.1`, `1.0.2`…) e os PCs se atualizam sozinhos.
+  Mudanças só em documentação, testes ou no workflow não geram versão. Regras em
   `packaging/calcular_versao.py`; as notas da versão saem dos commits (ou da seção do `CHANGELOG.md`, se houver).
 - O GitHub Actions (`.github/workflows/compilar.yml`) roda os testes nos três sistemas e compila. Cada programa
   compilado passa por autoteste (`--autoteste`), pelo teste da rede (`packaging/teste_rede.py`), é instalado como o
   usuário faria e passa pelo teste de **atualização automática** (`packaging/teste_atualizacao.py`): o programa
   instalado se acha antigo, baixa a versão nova, se instala, reabre e volta no mesmo Servir. A versão só é publicada
   se tudo isso passar nos quatro (Windows, Linux, Mac Apple Silicon e Mac Intel).
-- Pull requests compilam com o número que a versão teria, sem publicar (programas em "Artifacts" da execução).
+- Rodando o *Run workflow* em outra branch (ex.: a de um pull request), ele testa e compila com o número que a versão
+  teria, sem publicar (programas em "Artifacts" da execução).
 
 ### Subir para 1.1.0 ou 2.0.0
 As correções são numeradas sozinhas. Para marcar um passo maior (**MENOR**: recurso novo; **MAIOR**: mudança que
 obriga todos os PCs a atualizarem juntos, como o protocolo da rede):
 1. Escreva no `CHANGELOG.md` a seção `## [1.1.0] - AAAA-MM-DD` e faça o commit na `main`.
 2. `python packaging/nova_versao.py 1.1.0` (confere tudo, grava o `VERSION` e faz o commit).
-3. `git push`.
+3. `git push` e rode o *Run workflow* na `main`.
 
 Compilar localmente (gera para o sistema atual): `pip install pyinstaller`, `python packaging/baixar_lightcraft.py` e
 `pyinstaller --noconfirm packaging/descarregador.spec` (resultado em `dist/`).

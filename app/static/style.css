@@ -360,6 +360,14 @@ input[type=checkbox]:checked:disabled{opacity:.45}
   .ed-lado{width:auto;max-height:50vh;border-left:0;border-top:1px solid var(--bord)}.ed-estado{display:none}}
 .ed .ib.borda{background:var(--card);border:1px solid var(--bord);font-size:.8rem;padding:5px 9px}
 .ed .ib.borda:hover{border-color:var(--bord2)}
+/* presets: cartoes (um clique aplica na foto); o que bate com a foto atual fica em destaque */
+.ed-presets{display:flex;flex-direction:column;gap:6px;margin:10px 0 8px}
+.ed-pre .ed-pc{display:flex;flex-direction:column;align-items:stretch;gap:2px;width:100%;background:var(--card);border:1px solid var(--bord);border-radius:var(--r);padding:8px 11px;text-align:left;color:var(--txt);font-weight:400;font-size:.84rem}
+.ed-pre .ed-pc:hover{background:var(--card2);border-color:var(--bord2)}
+.ed-pc b{font-weight:600;font-size:.88rem}.ed-pc b i{font-style:normal;font-weight:400;font-size:.74rem;color:var(--fraco);margin-left:4px}
+.ed-pc small{color:var(--mut);font-size:.76rem;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ed-pre .ed-pc.on{border-color:var(--lima);background:var(--lima-a);box-shadow:inset 0 0 0 1px var(--lima)}
+.ed-pre #e-pre-todas{width:100%;justify-content:center;margin-bottom:6px}
 .ed .ib.borda .ic{width:15px;height:15px}
 
 /* editor: corte */
