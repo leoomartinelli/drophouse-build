@@ -233,11 +233,16 @@ async function vHome() {
   if (!S.form) S.form = formVazio();
   const dias = await api('/api/servir'); const f = S.form; const editando = !!S.editId;
   const r = st.rede;
+  const aux = r.modo === 'auxiliar';   // estacao auxiliar: o Dia de Servir e criado so no Lider e chega por "Conectar e sincronizar"
+  if (aux) S.editId = null;
   $app.innerHTML = `<div class="wrap">
   <div class="topbar"><div><h1>Painel inicial</h1><div class="mut mini">Descarregador de Fotos · versão ${esc(st.versao)}</div></div>
    <div class="acts"><button class="cinza" data-go="google">${ic('chave')}Login Google</button><button class="cinza" data-go="predef">${ic('lista')}Predefinições</button><button class="cinza" data-go="historico">${ic('relogio')}Histórico</button><button class="cinza" data-go="drive">${ic('ajustes')}Config Drive</button><button class="verm" id="b-sair" title="Fecha o programa neste computador">${ic('power')}Encerrar</button></div></div>
   <div class="grid"><div>
-    <div class="card"><h2 class="${editando ? 'warn' : 'ok'}">${editando ? 'Editando Dia do Servir' : 'Criar Novo Dia do Servir'}</h2>
+    ${aux ? `<div class="card"><h2>Estação auxiliar</h2>
+     <p class="mut">Este computador está como <b>estação auxiliar</b>. O Dia de Servir é criado na <b>estação Líder</b>: quando o Líder aparecer em "Rede local", clique em <b>Conectar e sincronizar</b> para receber o Servir dele.</p>
+     <p class="mut mini">Para criar um Dia de Servir aqui, mude este computador para Estação Líder.</p></div>`
+    : `<div class="card"><h2 class="${editando ? 'warn' : 'ok'}">${editando ? 'Editando Dia do Servir' : 'Criar Novo Dia do Servir'}</h2>
      <label for="f-nome">Nome do Servir</label><input type="text" id="f-nome" value="${esc(f.nome)}" placeholder="Ex.: Culto de Domingo">
      <label for="f-vol">Voluntários (fotógrafos)</label>
      <div class="row"><input type="text" id="f-vol" placeholder="Nome do voluntário"><button class="fix" id="a-vol">Adicionar</button></div>
@@ -252,12 +257,12 @@ async function vHome() {
      <label for="f-local">Pasta local do evento (opcional)</label>
      <div class="row"><input type="text" id="f-local" value="${esc(f.local)}" placeholder="Padrão: pasta do aplicativo"><button class="fix cinza" id="p-local">Procurar</button></div>
      <div style="margin-top:14px" class="row"><button class="verde grande" id="b-salvar">${editando ? 'Salvar alterações' : 'Criar e ativar novo Servir'}</button>${editando ? '<button class="cinza grande fix" id="b-canc" style="width:auto">Cancelar</button>' : ''}</div>
-    </div>
+    </div>`}
     <button class="cinza grande" id="b-avulso">Modo avulso (sem Dia de Servir)</button>
   </div><div>
     <div class="card"><h2>Dias de Servir Anteriores</h2>
      ${dias.slice().reverse().map(d => `<div class="item"><span class="t"><b>${esc(d.nome)}</b><br><span class="mut mini">${esc(d.data_criacao || '')} · ${d.voluntarios.length} voluntário(s)</span></span>
-       <button class="verde pq" data-at="${esc(d.id)}">Ativar</button><button class="pq" data-ed="${esc(d.id)}">Editar</button><button class="verm pq" data-ex="${esc(d.id)}">Excluir</button></div>`).join('') || '<p class="mut">Nenhum dia de servir criado ainda.</p>'}
+       <button class="verde pq" data-at="${esc(d.id)}">Ativar</button>${aux ? '' : `<button class="pq" data-ed="${esc(d.id)}">Editar</button>`}<button class="verm pq" data-ex="${esc(d.id)}">Excluir</button></div>`).join('') || '<p class="mut">Nenhum dia de servir criado ainda.</p>'}
     </div>
     <div class="card"><h2>Rede local (várias estações)</h2>
      <div class="row"><select id="n-modo" aria-label="Papel deste computador na rede"><option value="lider" ${r.modo === 'lider' ? 'selected' : ''}>Estação Líder</option><option value="auxiliar" ${r.modo === 'auxiliar' ? 'selected' : ''}>Estação Auxiliar</option></select><button class="fix cinza" id="n-rein">Reiniciar rede</button></div>
@@ -267,8 +272,9 @@ async function vHome() {
         : `<p class="warn">${pt('busca')}Procurando o Líder na rede local…</p>`)}
     </div></div></div></div>`;
   const q = s => $app.querySelector(s), qa = s => $app.querySelectorAll(s);
-  const ler = () => { f.nome = q('#f-nome').value; f.local = q('#f-local').value; f.criarDrive = q('#f-cdrive').checked; };
+  const ler = () => { if (aux) return; f.nome = q('#f-nome').value; f.local = q('#f-local').value; f.criarDrive = q('#f-cdrive').checked; };
   qa('[data-go]').forEach(b => b.onclick = () => ir(b.dataset.go));
+  if (!aux) {   // formulario de criar/editar Servir (nao existe na estacao auxiliar)
   q('#a-vol').onclick = () => { ler(); const v = q('#f-vol').value.trim(); if (v && !f.voluntarios.includes(v)) f.voluntarios.push(v); vHome(); };
   q('#f-vol').onkeydown = e => { if (e.key === 'Enter') q('#a-vol').click(); };
   q('#a-pasta').onclick = () => { ler(); const v = q('#f-pasta').value.trim(); if (v && !f.pastas.includes(v)) f.pastas.push(v); vHome(); };
@@ -297,6 +303,7 @@ async function vHome() {
     } catch (e) { toast(e.message, true); }
   };
   if (editando) q('#b-canc').onclick = () => { S.editId = null; S.form = formVazio(); vHome(); };
+  }
   qa('[data-at]').forEach(b => b.onclick = async () => { try { const sv = await api('/api/servir/' + b.dataset.at + '/ativar', { body: {} }); criarPastasDriveAuto(sv); S.entrou = true; S.qr = true; ir('descarregar'); } catch (e) { toast(e.message, true); } });
   qa('[data-ed]').forEach(b => b.onclick = () => {
     const d = dias.find(x => x.id === b.dataset.ed); S.editId = d.id;
