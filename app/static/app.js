@@ -17,7 +17,7 @@ const IC = {
   varias: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   zerar: '<path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/>',
   original: '<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>',
-  ok: '<path d="M20 6L9 17l-5-5"/>', cortar: '<path d="M6 2v14a2 2 0 002 2h14"/><path d="M18 22V8a2 2 0 00-2-2H2"/>',
+  ok: '<path d="M20 6L9 17l-5-5"/>', orientacao: '<rect x="2.5" y="8" width="11" height="8" rx="1.5"/><rect x="16" y="3.5" width="6" height="17" rx="1.5"/>', cortar: '<path d="M6 2v14a2 2 0 002 2h14"/><path d="M18 22V8a2 2 0 00-2-2H2"/>',
   girar: '<path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/>', lixo: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5a1.5 1.5 0 001.5 1.5h6a1.5 1.5 0 001.5-1.5l1-12.5"/>',
   add: '<path d="M12 5v14M5 12h14"/>', salvar: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M18 6L6 18M6 6l12 12"/>',
   teclado: '<rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
@@ -52,9 +52,16 @@ function toast(msg, err) {
   let pilha = document.getElementById('toasts');
   if (!pilha) { pilha = document.createElement('div'); pilha.id = 'toasts'; document.body.appendChild(pilha); }
   pilha.setAttribute('role', 'status'); pilha.setAttribute('aria-live', 'polite');   // leitor de tela anuncia os avisos
-  const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
-  pilha.appendChild(t); setTimeout(() => t.remove(), err ? 6000 : 3500);
+  // o mesmo aviso nao empilha (clicar varias vezes num preset so renova o que ja esta na tela)
+  // e no maximo TOAST_MAX ficam visiveis: o mais antigo sai para o novo entrar
+  const dur = err ? 6000 : 3500, cls = 'toast' + (err ? ' err' : '');
+  let t = [...pilha.children].find(x => x.textContent === msg && x.className === cls);
+  if (t) { clearTimeout(t._fim); pilha.appendChild(t); }
+  else { t = document.createElement('div'); t.className = cls; t.textContent = msg; pilha.appendChild(t); }
+  while (pilha.children.length > TOAST_MAX) { clearTimeout(pilha.firstElementChild._fim); pilha.firstElementChild.remove(); }
+  t._fim = setTimeout(() => t.remove(), dur);
 }
+const TOAST_MAX = 3;
 // janela = dialogo: o foco entra (na opcao segura), Tab fica dentro, Esc cancela e o foco volta para quem abriu.
 // As teclas nao vazam para a tela de baixo (selecao de fotos e editor tem atalhos no documento inteiro).
 function dialogo(bg, cancelar) {
@@ -390,7 +397,7 @@ async function vDescarregar() {
   const nomeOk = () => { const n = nomeFot(); return n && !/[\\/:*?"<>|]/.test(n) && n !== '.' && n !== '..'; };
   const catAtual = () => sv ? S.sel.cat : 'Raiz (Nenhuma)';
   const subpasta = () => sv ? true : !!S.sel.sub;
-  const resumoOrigem = () => `${ic('cartao')}<span>${esc(S.oCam || '')} · ${W.pastas.length} pasta(s) selecionada(s)</span>`;
+  const resumoOrigem = () => `${ic('cartao')}<span>${[esc(S.oCam || ''), `${W.pastas.length} pasta(s) selecionada(s)`].filter(Boolean).join(' · ')}</span>`;
 
   // --- cabecalho + indicador de passos ---
   const passosVis = sv ? PASSOS.filter((_, i) => i !== 2) : PASSOS, atual = nP(W.step);
@@ -737,7 +744,7 @@ async function abrirEditor(inicio = 0) {
         <div class="ed-painel" id="e-painel"></div>
         <div class="ed-cpainel hidden" id="e-cbar"><h3>${edIc('cortar')} Cortar e endireitar</h3>
           <label for="e-prop">Proporção</label><div class="ed-clinha"><select id="e-prop">${ED_PROPORCOES.map(([id, n]) => `<option value="${id}">${n}</option>`).join('')}</select>
-            <button class="ib borda" id="e-pgirar" title="Trocar entre horizontal e vertical">${edIc('girar')}</button></div>
+            <button class="ib borda" id="e-pgirar" title="Trocar entre horizontal e vertical">${edIc('orientacao')}</button></div>
           <label for="e-ang">Endireitar <span id="e-angv">0,0°</span></label><input type="range" id="e-ang" min="-45" max="45" step="0.1" value="0" title="Duplo clique: volta para 0°">
           <button class="ib borda larga" id="e-czerar" title="Volta para a foto inteira e reta">${edIc('zerar')}<span>Redefinir corte</span></button>
           <p class="ed-dica">Arraste os cantos e as bordas; arraste o meio para mover. O corte é feito na resolução original da foto.</p>
@@ -776,9 +783,17 @@ async function abrirEditor(inicio = 0) {
 
   // --- painel ---
   function painel() {
-    const preds = pre.predefinicoes;
-    $('#e-painel').innerHTML = `<div class="ed-pre"><span>Presets</span>
-      <div class="ed-presets">${preds.map((p, k) => `<button class="ed-pc" data-k="${k}" title="${esc(p.descricao || 'Clique para aplicar nesta foto')}"><b>${esc(p.nome)}${p.pronta ? '' : ' <i>salvo aqui</i>'}</b>${p.descricao ? `<small>${esc(p.descricao)}</small>` : ''}</button>`).join('') || '<p class="ed-dica">Nenhum preset ainda.</p>'}</div>
+    // presets em grade compacta (recolhivel, para nao empurrar Luz/Cor para baixo), separados em grupos;
+    // a descricao inteira aparece embaixo: a do preset sob o mouse, ou a do que esta aplicado nesta foto
+    const preds = pre.predefinicoes, aberto = !fechadas.has('presets');
+    const grupos = [['Da casa', p => p.pronta && p.ajustes.perfil], ['Ajustes rápidos', p => p.pronta && !p.ajustes.perfil], ['Salvos aqui', p => !p.pronta]];
+    const lista = grupos.map(([nome, f]) => {
+      const ks = preds.map((p, k) => f(p) ? k : -1).filter(k => k >= 0);
+      return ks.length ? `<div class="ed-sub">${nome}</div><div class="ed-presets">${ks.map(k => `<button class="ed-pc" data-k="${k}" title="Aplicar nesta foto">${esc(preds[k].nome)}</button>`).join('')}</div>` : '';
+    }).join('');
+    $('#e-painel').innerHTML = `<button class="ed-sec ${aberto ? '' : 'fechada'}" data-s="presets">${ic('baixo')}Presets</button>
+      <div class="ed-grupo ed-pre ${aberto ? '' : 'hidden'}">${lista || '<p class="ed-dica">Nenhum preset ainda.</p>'}
+      <p class="ed-pre-desc" id="e-pre-desc"></p>
       <button class="ib borda larga" id="e-pre-todas" title="Leva a luz e a cor do preset para todas as fotos (o corte de cada foto fica como está)" disabled>${edIc('varias')}<span>Aplicar em todas as fotos</span></button>
       <div class="ed-pre-b"><button class="ib borda" id="e-pre-salvar" title="Guarda os ajustes desta foto com um nome, para usar em outras fotos">${edIc('salvar')}<span>Salvar ajustes atuais</span></button>
       <button class="ib borda" id="e-pre-excluir" title="Excluir um preset salvo neste computador (os prontos vêm com o programa)" ${preds.some(p => !p.pronta) ? '' : 'disabled'}>${edIc('lixo')}</button></div></div>` +
@@ -798,9 +813,9 @@ async function abrirEditor(inicio = 0) {
         if (!aj) return;
         const x = c === 'wb.temp' ? tVal(+r.value) : +r.value;
         if (c === 'wb.temp' || c === 'wb.tint') { aj.wb[c === 'wb.temp' ? 'temp' : 'tint'] = x; aj.wb.modo = 'custom'; } else aj.valores[c] = x;
-        mostraValores(); agendar();
+        mostraValores(); agendar(true);
       };
-      r.onchange = registrar;                                   // um passo do "desfazer" por movimento da regua
+      r.onchange = () => { registrar(); agendar(); };          // um passo do "desfazer" por movimento da regua
       d.ondblclick = () => {                                   // como no Lightroom: duplo clique zera
         if (!aj) return;
         if (c === 'wb.temp' || c === 'wb.tint') aj.wb = { modo: 'asShot', ...cf }; else aj.valores[c] = C[c].padrao;
@@ -819,13 +834,15 @@ async function abrirEditor(inicio = 0) {
     if ($('#e-perfil')) {
       const pint = $('#e-pint'), r = pint.querySelector('input');
       $('#e-perfil').onchange = e => { if (!aj) return; aj.perfil = e.target.value ? { lut: e.target.value, intensidade: aj.perfil ? aj.perfil.intensidade : 100 } : null; mudou(); };
-      r.oninput = () => { if (!aj || !aj.perfil) return; aj.perfil.intensidade = +r.value; mostraValores(); agendar(); };
-      r.onchange = registrar;
+      r.oninput = () => { if (!aj || !aj.perfil) return; aj.perfil.intensidade = +r.value; mostraValores(); agendar(true); };
+      r.onchange = () => { registrar(); agendar(); };
       pint.ondblclick = () => { if (!aj || !aj.perfil) return; aj.perfil.intensidade = 100; mudou(); };
     }
-    $('#e-painel').querySelectorAll('.ed-pc').forEach(b => b.onclick = () => {
-      const p = pre.predefinicoes[+b.dataset.k]; if (!p || !aj) return;
-      aj = completar(p.ajustes); mudou(); toast(`Preset "${p.nome}" aplicado nesta foto`);
+    $('#e-painel').querySelectorAll('.ed-pc').forEach(b => {
+      const p = pre.predefinicoes[+b.dataset.k];
+      b.onclick = () => { if (!p || !aj) return; aj = completar(p.ajustes); mudou(); toast(`Preset "${p.nome}" aplicado nesta foto`); };
+      b.onmouseenter = b.onfocus = () => descPreset(p);
+      b.onmouseleave = b.onblur = () => descPreset(presetAtivo());
     });
     $('#e-pre-todas').onclick = async () => {
       const p = presetAtivo(); if (!p) return;
@@ -880,7 +897,11 @@ async function abrirEditor(inicio = 0) {
     const ativo = presetAtivo();
     $('#e-painel').querySelectorAll('.ed-pc').forEach(b => b.classList.toggle('on', pre.predefinicoes[+b.dataset.k] === ativo));
     const todas = $('#e-pre-todas'); if (todas) { todas.disabled = !ativo; todas.querySelector('span').textContent = ativo ? `Aplicar "${ativo.nome}" em todas` : 'Aplicar em todas as fotos'; }
-    curva(); situacao();
+    descPreset(ativo); curva(); situacao();
+  }
+  function descPreset(p) {
+    const d = $('#e-pre-desc'); if (!d) return;
+    d.innerHTML = p ? `<b>${esc(p.nome)}</b>${p.descricao ? ' · ' + esc(p.descricao) : ''}` : 'Clique num preset para aplicar nesta foto.';
   }
 
   // --- curva de pontos (canvas) ---
@@ -907,7 +928,7 @@ async function abrirEditor(inicio = 0) {
     };
     const local = e => { const b = cv.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - b.left) / b.width)), Math.min(1, Math.max(0, 1 - (e.clientY - b.top) / b.height))]; };
     const perto = (p, [x, y]) => p.findIndex(q => Math.hypot((q[0] - x) * cv.clientWidth, (q[1] - y) * cv.clientWidth) < 10);
-    const grava = p => { aj.curva[canal] = (p.length === 2 && p[0][0] === 0 && p[0][1] === 0 && p[1][0] === 1 && p[1][1] === 1) ? [] : p; cvDesenha(); agendar(); };
+    const grava = p => { aj.curva[canal] = (p.length === 2 && p[0][0] === 0 && p[0][1] === 0 && p[1][0] === 1 && p[1][1] === 1) ? [] : p; cvDesenha(); agendar(arrasto >= 0); };
     cv.onpointerdown = e => {
       if (!aj) return; cv.setPointerCapture(e.pointerId);
       const p = pts(), q = local(e); arrasto = perto(p, q);
@@ -919,7 +940,7 @@ async function abrirEditor(inicio = 0) {
       const xmin = ini ? 0 : p[arrasto - 1][0] + 0.01, xmax = fim ? 1 : p[arrasto + 1][0] - 0.01;
       p[arrasto] = [Math.round(Math.min(xmax, Math.max(xmin, x)) * 1000) / 1000, Math.round(y * 1000) / 1000]; grava(p);
     };
-    cv.onpointerup = () => { if (arrasto >= 0) { arrasto = -1; registrar(); } };
+    cv.onpointerup = () => { if (arrasto >= 0) { arrasto = -1; registrar(); agendar(); } };
     cv.ondblclick = e => { const p = pts(), k = perto(p, local(e)); if (k > 0 && k < p.length - 1) { p.splice(k, 1); grava(p); registrar(); } };
     cvDesenha();
   }
@@ -1042,16 +1063,21 @@ async function abrirEditor(inicio = 0) {
   $('#e-ang').ondblclick = () => { if (!cortando) return; cortando.angulo = 0; $('#e-ang').value = 0; validar(true); };
 
   // --- previa ao vivo (uma por vez; a ultima mudanca sempre e mostrada). Com zoom, a versao em tamanho cheio vem em seguida ---
-  function agendar() { if (emVoo) { deNovo = true; return; } pedir(); }
+  // rapido = enquanto arrasta uma regua: previa em metade do tamanho (revela bem mais rapido em PC fraco);
+  // ao soltar a regua vem a previa em tamanho de tela
+  let rapido = false;
+  function agendar(r = false) { rapido = r; if (emVoo) { deNovo = true; return; } pedir(); }
   async function pedir() {
     emVoo = true; deNovo = false;
-    const alvo = i, texto = antes ? '{}' : cortando ? ajTexto({ ...aj, corte: { rect: cortando.max, angulo: cortando.angulo } }) : ajTexto(), lado = Math.min(2048, Math.round(Math.max(stage.clientWidth, stage.clientHeight) * (window.devicePixelRatio || 1)));
+    const tela = Math.min(2048, Math.round(Math.max(stage.clientWidth, stage.clientHeight) * (window.devicePixelRatio || 1)));
+    const alvo = i, texto = antes ? '{}' : cortando ? ajTexto({ ...aj, corte: { rect: cortando.max, angulo: cortando.angulo } }) : ajTexto(), leve = rapido, lado = leve ? Math.max(480, Math.round(tela / 2)) : tela;
     const t = setTimeout(() => aviso('Revelando…'), 600);
     try {
       const r = await fetch(`/api/editor/${i}/previa?lado=${lado}&aj=${encodeURIComponent(texto)}`);
       if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).detail) || 'Erro ' + r.status);
       const b = await r.blob();
-      if (alvo === i) { const u = URL.createObjectURL(b); zoom.foto(u, `/api/editor/${i}/previa?lado=0&aj=${encodeURIComponent(texto)}`); if (urlBlob) setTimeout(URL.revokeObjectURL, 2000, urlBlob); urlBlob = u; }
+      // a previa leve nao pede a versao em tamanho cheio (ela e menor que a tela e o zoom acharia que precisa)
+      if (alvo === i) { const u = URL.createObjectURL(b); zoom.foto(u, leve ? '' : `/api/editor/${i}/previa?lado=0&aj=${encodeURIComponent(texto)}`); if (urlBlob) setTimeout(URL.revokeObjectURL, 2000, urlBlob); urlBlob = u; }
       clearTimeout(t); if (!conta) aviso('');
     } catch (e) { clearTimeout(t); aviso('Não foi possível revelar: ' + e.message); }
     emVoo = false; if (deNovo) pedir();
@@ -1114,15 +1140,33 @@ async function abrirEditor(inicio = 0) {
   }
 
   // --- fotos ---
+  // a tira e montada uma vez e depois so atualiza o que mudou: refazer tudo a cada 1,5 s (enquanto salva)
+  // recriava centenas de miniaturas e pesava em PC fraco
+  let curTira = -1;
   function tira() {
-    $('#e-strip').innerHTML = fotos.map((f, k) => `<span class="tb ${k === i ? 'cur' : ''} ${marcando && marcando.has(k) ? 'marcada' : ''}" data-k="${k}"><img src="/api/revisor/imagem/${k}?lado=160&v=${v}${versaoMini[k] ? '&m=' + versaoMini[k] : ''}" loading="lazy" title="${esc(f.nome)}">
-      ${marcando ? `<b class="ck">${marcando.has(k) ? ic('ok') : ''}</b>` : ''}
-      ${f.estado === 'salvando' ? '<b class="bd">salvando…</b>' : f.estado.startsWith('erro') ? '<b class="bd err" title="' + esc(f.estado) + '">erro</b>' : f.editada ? '<b class="bd">' + ic('lapis') + '</b>' : ''}</span>`).join('');
-    $('#e-strip').querySelectorAll('.tb').forEach(t => t.onclick = () => {
-      const k = +t.dataset.k;
-      if (marcando) { marcando.has(k) ? marcando.delete(k) : marcando.add(k); barraMarcar(); tira(); } else ir(k);
+    const s = $('#e-strip');
+    if (s.children.length !== fotos.length) {
+      s.innerHTML = fotos.map((_, k) => `<span class="tb" data-k="${k}"><img loading="lazy" alt=""><b class="ck hidden"></b><b class="bd hidden"></b></span>`).join('');
+      s.querySelectorAll('.tb').forEach(t => t.onclick = () => {
+        const k = +t.dataset.k;
+        if (marcando) { marcando.has(k) ? marcando.delete(k) : marcando.add(k); barraMarcar(); tira(); } else ir(k);
+      });
+      curTira = -1;
+    }
+    fotos.forEach((f, k) => {
+      const t = s.children[k], [im, ck, bd] = t.children;
+      const src = `/api/revisor/imagem/${k}?lado=160&v=${v}${versaoMini[k] ? '&m=' + versaoMini[k] : ''}`;
+      if (im.getAttribute('src') !== src) im.setAttribute('src', src);
+      if (im.title !== f.nome) im.title = f.nome;
+      t.classList.toggle('cur', k === i); t.classList.toggle('marcada', !!(marcando && marcando.has(k)));
+      const marca = marcando ? (marcando.has(k) ? 'sim' : 'nao') : '';
+      if (ck.dataset.m !== marca) { ck.dataset.m = marca; ck.classList.toggle('hidden', !marcando); ck.innerHTML = marca === 'sim' ? ic('ok') : ''; }
+      const [cls, html, tit] = f.estado === 'salvando' ? ['bd', 'salvando…', ''] : f.estado.startsWith('erro') ? ['bd err', 'erro', f.estado]
+        : f.editada ? ['bd', ic('lapis'), ''] : ['bd hidden', '', ''];
+      if (bd.dataset.h !== cls + html) { bd.dataset.h = cls + html; bd.className = cls; bd.innerHTML = html; }
+      bd.title = tit;
     });
-    const cur = $('#e-strip .tb.cur'); if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'center' });
+    if (curTira !== i) { curTira = i; const cur = s.children[i]; if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'center' }); }
     situacao();
   }
   async function atualizaLista() {
@@ -1199,7 +1243,8 @@ async function abrirEditor(inicio = 0) {
     if (!await confirmar('Restaurar original', `Desfazer todas as edições de "${fotos[i].nome}" e voltar à foto original?`, 'Restaurar original', 'Cancelar', true)) return;
     try { await api(`/api/editor/${i}/restaurar`, { body: {} }); versaoMini[i] = Date.now(); historico.delete(i); await atualizaLista(); carregar(); } catch (e) { toast(e.message, true); }
   };
-  addEventListener('resize', () => { if (document.body.contains(el)) { cvDesenha(); agendar(); } });
+  let tRes = null;
+  addEventListener('resize', () => { if (!document.body.contains(el)) return; cvDesenha(); clearTimeout(tRes); tRes = setTimeout(agendar, 250); });   // so revela de novo quando parar de redimensionar
   painel(); carregar();
 }
 
@@ -1396,7 +1441,8 @@ async function uploadsAtualiza() {
     upAtivosAntes = ativos;
   } catch (e) { }
 }
-setInterval(uploadsAtualiza, 1500); uploadsAtualiza();
+// aba escondida ou janela minimizada: nao fica perguntando ao servidor (volta na hora quando a tela aparece)
+setInterval(() => { if (!document.hidden) uploadsAtualiza(); }, 1500); uploadsAtualiza();
 
 // ---------- atualizacao automatica (programa instalado) ----------
 // o programa fecha e reabre na versao nova sozinho; a tela mostra o andamento e recarrega quando ele volta
@@ -1426,7 +1472,8 @@ async function vigiaAtualizacao() {
     if (instalando) bannerAtualizacao({ estado: 'instalando', msg: 'Atualizando o programa… a tela volta sozinha em instantes.' });
   }
 }
-setInterval(vigiaAtualizacao, 4000); vigiaAtualizacao();
+setInterval(() => { if (!document.hidden) vigiaAtualizacao(); }, 4000); vigiaAtualizacao();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { uploadsAtualiza(); vigiaAtualizacao(); } });
 try { if (sessionStorage.getItem('voltarDescarregar')) { sessionStorage.removeItem('voltarDescarregar'); S.entrou = true; } } catch (e) { }
 
 render();
