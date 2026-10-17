@@ -103,7 +103,7 @@ async function criarPastasDriveAuto(sv) {
 async function mostrarQR() {
   let info; try { info = await api('/api/painel/info'); } catch (e) { return toast(e.message, true); }
   const bg = document.createElement('div'); bg.className = 'modal-bg';
-  bg.innerHTML = `<div class="modal qr-modal"><h2>📱 Painel de acompanhamento</h2>
+  bg.innerHTML = `<div class="modal qr-modal"><h2>Painel de acompanhamento</h2>
     <p class="mut mini">Escaneie com o celular (conectado na <b>mesma rede</b> deste computador) para acompanhar quem está descarregando, os PCs livres e quem ainda falta.</p>
     <div class="qr-box"><img id="qr-img" alt="QR code do painel"></div>
     <div class="path" id="qr-url" style="text-align:center"></div>
@@ -127,7 +127,7 @@ async function abrirPredefinicoes(jaTem) {
   let lista; try { lista = await api('/api/predefinicoes'); } catch (e) { toast(e.message, true); return null; }
   return new Promise(res => {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
-    bg.innerHTML = `<div class="modal larga"><h2>📋 Predefinições de categorias</h2><p class="mut mini">Marque o grupo para selecionar todas as pastas dele; clique numa pasta para tirá-la da seleção.</p>
+    bg.innerHTML = `<div class="modal larga"><h2>Predefinições de categorias</h2><p class="mut mini">Marque o grupo para selecionar todas as pastas dele; clique numa pasta para tirá-la da seleção.</p>
       <div id="pd-corpo"></div><div class="btns"><button class="cinza" id="pd-x">Cancelar</button><button class="verde" id="pd-ok" disabled>Adicionar selecionadas</button></div></div>`;
     $modal.appendChild(bg);
     const sel = lista.map(() => new Set()), corpo = bg.querySelector('#pd-corpo'), ok = bg.querySelector('#pd-ok');
@@ -159,7 +159,7 @@ async function vPredef(cache) {
   let lista = cache; if (!lista) { try { lista = await api('/api/predefinicoes'); } catch (e) { return alerta('Erro', e.message); } }
   const ed = S.pdEd || null;
   const salvar = async nova => { try { await api('/api/predefinicoes', { method: 'PUT', body: nova }); return true; } catch (e) { toast(e.message, true); return false; } };
-  $app.innerHTML = `<div class="wrap" style="max-width:760px"><div class="topbar"><h1>📋 Predefinições de categorias</h1><div class="acts"><button class="cinza" id="pr-v">⬅ Voltar</button></div></div>
+  $app.innerHTML = `<div class="wrap" style="max-width:760px"><div class="topbar"><h1>Predefinições de categorias</h1><div class="acts"><button class="cinza" id="pr-v">⬅ Voltar</button></div></div>
   <p class="mut">Uma predefinição é um grupo de pastas de categoria (ex.: <b>ELEVE</b> → Voltz, Bold, Burn, A3). No painel inicial, o botão "📋 Predefinições" ao lado das categorias permite escolher quais usar.</p>
   ${ed ? `<div class="card"><h2>${ed.i === null ? 'Nova predefinição' : 'Editar predefinição'}</h2>
      <label>Título</label><input type="text" id="pd-t" value="${esc(ed.titulo)}" placeholder="Ex.: ELEVE">
@@ -200,7 +200,7 @@ async function vHome() {
   const dias = await api('/api/servir'); const f = S.form; const editando = !!S.editId;
   const r = st.rede;
   $app.innerHTML = `<div class="wrap">
-  <div class="topbar"><div><h1>📸 Descarregador de Fotos — Painel Inicial</h1><div class="mut mini">Versão ${esc(st.versao)}</div></div>
+  <div class="topbar"><div><h1>Painel inicial</h1><div class="mut mini">Descarregador de Fotos · versão ${esc(st.versao)}</div></div>
    <div class="acts"><button data-go="google">🔑 Login Google</button><button data-go="predef">📋 Predefinições</button><button data-go="historico">📊 Histórico</button><button data-go="drive">⚙️ Config Drive</button><button class="verm" id="b-sair" title="Fecha o programa neste computador">⏻ Encerrar</button></div></div>
   <div class="grid"><div>
     <div class="card"><h2 class="${editando ? 'warn' : 'ok'}">${editando ? '✏️ Editando Dia do Servir' : 'Criar Novo Dia do Servir'}</h2>
@@ -225,7 +225,7 @@ async function vHome() {
      ${dias.slice().reverse().map(d => `<div class="item"><span class="t"><b>${esc(d.nome)}</b><br><span class="mut mini">${esc(d.data_criacao || '')} · ${d.voluntarios.length} voluntário(s)</span></span>
        <button class="verde pq" data-at="${esc(d.id)}">Ativar</button><button class="pq" data-ed="${esc(d.id)}">Editar</button><button class="verm pq" data-ex="${esc(d.id)}">Excluir</button></div>`).join('') || '<p class="mut">Nenhum dia de servir criado ainda.</p>'}
     </div>
-    <div class="card"><h2>🌐 Rede Local (várias estações)</h2>
+    <div class="card"><h2>Rede local (várias estações)</h2>
      <div class="row"><select id="n-modo"><option value="lider" ${r.modo === 'lider' ? 'selected' : ''}>Estação Líder</option><option value="auxiliar" ${r.modo === 'auxiliar' ? 'selected' : ''}>Estação Auxiliar</option></select><button class="fix cinza" id="n-rein">Reiniciar rede</button></div>
      <p class="mut mini">Este computador: ${esc(r.ip)}:${r.porta}</p>
      ${r.modo === 'lider' ? `<h3>Estações conectadas</h3>${r.auxiliares.map(a => `<div class="item"><span>💻 ${esc(a.nome)} (${esc(a.ip)}) <span class="mini ${a.versao === st.versao ? 'mut' : 'warn'}">${a.versao ? 'v' + esc(a.versao) : 'versão desconhecida'}${a.versao === st.versao ? '' : ' ⚠️ diferente deste PC (v' + esc(st.versao) + ') — atualize'}</span></span><span class="ok mini">🟢 Conectado</span></div>`).join('') || '<p class="mut mini">Nenhuma estação conectada. Ative um Servir para transmitir na rede.</p>'}`
@@ -356,16 +356,16 @@ async function vDescarregar() {
     <div class="nav"><button class="cinza" id="w-back">⬅ Voltar</button><button class="verde" id="b-iniciar">▶ Iniciar Descarregamento</button></div>`;
   else if (W.step === 4) corpo = `<h2>Passo ${nP(4)} · Copiando fotos…</h2><p class="mut">Não feche esta página nem remova o cartão até terminar.</p>
     <progress id="pg" value="${tr.progresso || 0}" max="1"></progress><div id="pg-t" class="mut" style="margin-top:6px">${esc(tr.msg || '')}</div>`;
-  else corpo = `<h2 class="ok">✅ Passo ${nP(5)} · Descarregamento concluído!</h2><p class="mut">${esc(tr.msg || '')}${st.transferidas ? ` · ${st.transferidas} foto(s) disponíveis para revisão` : ''}</p>
-    <button class="grande" id="b-sel" ${st.transferidas ? '' : 'disabled'}>🖼️ Selecionar Fotos (apagar as ruins)</button>
+  else corpo = `<h2 class="ok">Passo ${nP(5)} · Descarregamento concluído!</h2><p class="mut">${esc(tr.msg || '')}${st.transferidas ? ` · ${st.transferidas} foto(s) disponíveis para revisão` : ''}</p>
+    <button class="grande verde" id="b-sel" ${st.transferidas ? '' : 'disabled'}>🖼️ Selecionar Fotos (apagar as ruins)</button>
     ${st.editor_disponivel ? `<button class="grande roxo" id="b-edit" style="margin-top:8px" ${st.transferidas ? '' : 'disabled'}>🎨 Editar Fotos (luz e cor)</button>` : ''}
     <div class="row" style="margin-top:8px"><button class="cinza" id="b-abrir">📁 Abrir Pasta</button><button class="cinza" id="b-novo">🔄 Novo Descarregamento</button></div>
-    <h3>☁️ Enviar para o Google Drive (opcional)</h3><select id="s-drive">${optsDrive.map(o => `<option ${S.sel.drive === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}</select>
+    <h3>Enviar para o Google Drive (opcional)</h3><select id="s-drive">${optsDrive.map(o => `<option ${S.sel.drive === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}</select>
     <button class="lar" id="b-up" style="margin-top:8px;width:100%" ${st.transferidas ? '' : 'disabled'}>⬆ Enviar fotos para o Drive</button>
     <p class="mut mini">O envio roda em segundo plano — você já pode iniciar um novo descarregamento. O progresso aparece no canto superior direito.</p>`;
 
   $app.innerHTML = `<div class="wrap" style="max-width:760px">
-  <div class="topbar"><div><h1>${sv ? '🙏 ' + esc(sv.nome) : '📂 Modo Avulso'}</h1><div class="mut mini">${sv ? 'Dia do Servir ativo' : 'Sem dia de servir'}</div></div>
+  <div class="topbar"><div><h1>${sv ? esc(sv.nome) : 'Modo avulso'}</h1><div class="mut mini">${sv ? 'Dia do Servir ativo' : 'Sem dia de servir'}</div></div>
    <div class="acts">${sv && st.rede.modo === 'lider' ? '<button class="pq" id="b-qr">📱 Painel (QR)</button>' : ''}${sv ? '<button class="lar pq" id="b-raiz">📁 Pasta do Servir</button><button class="verm pq" id="b-fin">🏁 Finalizar Servir</button>' : ''}<button class="cinza pq" id="b-voltar">⬅ Início</button></div></div>
   ${stepper}
   ${resumos.map(r => `<div class="resumo"><span>${r.t}</span>${editavel ? `<button class="pq cinza" data-ed="${r.k}">Alterar</button>` : ''}</div>`).join('')}
@@ -1183,7 +1183,7 @@ async function abrirRevisor() {
 // ---------- HISTORICO ----------
 async function vHistorico() {
   const h = await api('/api/historico');
-  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>📊 Histórico de Descarregamentos</h1><div class="acts"><button class="verm" id="h-limpar">🗑 Limpar histórico</button><button class="cinza" id="h-v">⬅ Voltar</button></div></div>
+  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Histórico de descarregamentos</h1><div class="acts"><button class="verm" id="h-limpar">🗑 Limpar histórico</button><button class="cinza" id="h-v">⬅ Voltar</button></div></div>
   ${h.map(x => { const d = (x.data || '').split('-'); const dt = d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : x.data;
     return `<div class="item"><span class="t">📅 ${esc(dt)} às ${esc(x.hora)}<br>👤 Fotógrafo: ${esc(x.fotografo)}<br>📥 Copiadas: ${x.descarregadas} | ✅ Selecionadas: ${x.selecionadas}<br><span class="mut mini">📁 ${esc(x.destino)}</span></span><button class="pq" data-p="${esc(x.destino)}">📁 Abrir Pasta</button></div>`; }).join('') || '<p class="mut">Nenhum registro de descarregamento encontrado.</p>'}</div>`;
   $app.querySelector('#h-v').onclick = () => ir('home');
@@ -1194,12 +1194,12 @@ async function vHistorico() {
 // ---------- CONFIG DRIVE / PASTAS LOCAIS ----------
 async function vDrive() {
   const cfg = S.cfg || (S.cfg = await api('/api/config'));
-  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>⚙️ Configuração de Pastas</h1><div class="acts"><button data-go="google">🔑 Conta Google</button><button class="cinza" id="d-v">⬅ Voltar</button></div></div>
+  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Configuração de pastas</h1><div class="acts"><button data-go="google">🔑 Conta Google</button><button class="cinza" id="d-v">⬅ Voltar</button></div></div>
   <p class="mut">As pastas configuradas valem apenas para o dia de hoje (${new Date().toLocaleDateString('pt-BR')}).</p>
-  <div class="grid"><div class="card"><h2>☁️ Pastas do Google Drive</h2>
+  <div class="grid"><div class="card"><h2>Pastas do Google Drive</h2>
    <input type="text" id="d-nome" placeholder="Nome de exibição (opcional)" style="margin-bottom:6px"><div class="row"><input type="text" id="d-link" placeholder="Link ou ID da pasta"><button class="fix" id="d-add">Adicionar</button></div>
    ${cfg.pastas.map((p, i) => `<div class="item"><span class="t">☁️ ${esc(p.nome)}<br><span class="mut mini">${esc(p.link)}</span></span><a href="https://drive.google.com/drive/folders/${encodeURIComponent(p.link.split('/folders/').pop().split('?')[0])}" target="_blank"><button class="pq cinza">Abrir</button></a><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div>
-  <div class="card"><h2>💻 Pastas locais de destino</h2>
+  <div class="card"><h2>Pastas locais de destino</h2>
    <input type="text" id="l-nome" placeholder="Nome de exibição (opcional)" style="margin-bottom:6px"><div class="row"><input type="text" id="l-cam" placeholder="Caminho da pasta"><button class="fix cinza" id="l-proc">Procurar</button><button class="fix" id="l-add">Adicionar</button></div>
    ${cfg.pastas_local.map((p, i) => `<div class="item"><span class="t">💻 ${esc(p.nome)}<br><span class="mut mini">${esc(p.caminho)}</span></span><button class="pq cinza" data-ol="${i}">Abrir</button><button class="verm pq" data-rl="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div></div>
   <button class="verde grande" id="d-salvar">💾 Salvar e Fechar</button></div>`;
@@ -1222,7 +1222,7 @@ async function vDrive() {
 // ---------- CONTA GOOGLE ----------
 async function vGoogle() {
   const g = await api('/api/google/status');
-  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>🔑 Conta Google</h1><div class="acts"><button class="cinza" id="g-v">⬅ Voltar</button></div></div>
+  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Conta Google</h1><div class="acts"><button class="cinza" id="g-v">⬅ Voltar</button></div></div>
   ${g.disponivel ? '' : '<p class="bad">As bibliotecas do Google não estão instaladas (pip install -r requirements.txt).</p>'}
   <div class="grid"><div class="card"><h2>1. Credenciais OAuth</h2>
     <p>Status: <b class="${g.tem_credenciais ? 'ok' : 'warn'}">${g.tem_credenciais ? '✅ credentials.json configurado' : '⚠️ não configurado'}</b></p>
