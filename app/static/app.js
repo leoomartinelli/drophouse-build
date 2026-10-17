@@ -85,9 +85,9 @@ function escolherPasta(titulo, inicio) {
       try {
         const d = await api('/api/fs/list?path=' + encodeURIComponent(p || '')); atual = d.path;
         $('#fs-p').textContent = d.path;
-        $('#fs-at').innerHTML = d.atalhos.map((a, i) => `<span class="chip" style="cursor:pointer" data-a="${i}">${ic('pin')}${esc(a.nome)}</span>`).join('');
+        $('#fs-at').innerHTML = d.atalhos.map((a, i) => `<button type="button" class="chip" data-a="${i}">${ic('pin')}${esc(a.nome)}</button>`).join('');
         $('#fs-at').querySelectorAll('[data-a]').forEach(e => e.onclick = () => ir(d.atalhos[e.dataset.a].caminho));
-        $('#fs-l').innerHTML = `<div data-p="${esc(d.parent)}">${ic('cima')}..</div>` + d.pastas.map(n => `<div data-n="${esc(n)}">${ic('pasta')}${esc(n)}</div>`).join('');
+        $('#fs-l').innerHTML = `<button type="button" data-p="${esc(d.parent)}">${ic('cima')}..</button>` + d.pastas.map(n => `<button type="button" data-n="${esc(n)}">${ic('pasta')}${esc(n)}</button>`).join('');
         $('#fs-l').querySelector('[data-p]').onclick = () => ir(d.parent);
         $('#fs-l').querySelectorAll('[data-n]').forEach(e => e.onclick = () => ir(d.path.replace(/[\\/]$/, '') + (d.path.includes('\\') ? '\\' : '/') + e.dataset.n));
       } catch (e) { toast(e.message, true); }
@@ -141,7 +141,7 @@ async function mostrarQR() {
     <p class="mut mini">Escaneie com o celular (conectado na <b>mesma rede</b> deste computador) para acompanhar quem está descarregando, os PCs livres e quem ainda falta.</p>
     <div class="qr-box"><img id="qr-img" alt="QR code do painel"></div>
     <div class="path" id="qr-url" style="text-align:center"></div>
-    ${info.ips.length > 1 ? `<p class="mut mini">Não abriu? Este computador tem mais de uma rede; escolha a que os celulares usam:</p><div class="chips" id="qr-ips">${info.ips.map((ip, i) => `<span class="chip" style="cursor:pointer" data-i="${i}">${esc(ip)}</span>`).join('')}</div>` : ''}
+    ${info.ips.length > 1 ? `<p class="mut mini">Não abriu? Este computador tem mais de uma rede; escolha a que os celulares usam:</p><div class="chips" id="qr-ips">${info.ips.map((ip, i) => `<button type="button" class="chip" data-i="${i}">${esc(ip)}</button>`).join('')}</div>` : ''}
     <div class="btns"><a id="qr-abrir" target="_blank" rel="noopener"><button class="cinza">Abrir painel aqui</button></a><button id="qr-ok">Fechar</button></div></div>`;
   $modal.appendChild(bg);
   const $ = x => bg.querySelector(x);
@@ -196,9 +196,9 @@ async function vPredef(cache) {
   $app.innerHTML = `<div class="wrap" style="max-width:760px"><div class="topbar"><h1>Predefinições de categorias</h1><div class="acts"><button class="cinza" id="pr-v">${ic('voltar')}Voltar</button></div></div>
   <p class="mut">Uma predefinição é um grupo de pastas de categoria (ex.: <b>ELEVE</b> → Voltz, Bold, Burn, A3). No painel inicial, o botão "Predefinições" ao lado das categorias permite escolher quais usar.</p>
   ${ed ? `<div class="card"><h2>${ed.i === null ? 'Nova predefinição' : 'Editar predefinição'}</h2>
-     <label>Título</label><input type="text" id="pd-t" value="${esc(ed.titulo)}" placeholder="Ex.: ELEVE">
-     <label>Nomes das pastas</label><div class="row"><input type="text" id="pd-n" placeholder="Nome da pasta"><button class="fix" id="pd-add">Adicionar</button></div>
-     <div class="chips">${ed.pastas.map((n, k) => `<span class="chip">${esc(n)} <b data-r="${k}" title="Remover">${ic('x')}</b></span>`).join('') || '<span class="mut mini">Nenhuma pasta</span>'}</div>
+     <label for="pd-t">Título</label><input type="text" id="pd-t" value="${esc(ed.titulo)}" placeholder="Ex.: ELEVE">
+     <label for="pd-n">Nomes das pastas</label><div class="row"><input type="text" id="pd-n" placeholder="Nome da pasta"><button class="fix" id="pd-add">Adicionar</button></div>
+     <div class="chips">${ed.pastas.map((n, k) => `<span class="chip">${esc(n)} <button type="button" class="chip-x" data-r="${k}" title="Remover" aria-label="Remover">${ic('x')}</button></span>`).join('') || '<span class="mut mini">Nenhuma pasta</span>'}</div>
      <div class="nav"><button class="cinza" id="pd-cancel">Cancelar</button><button class="verde" id="pd-save">Salvar predefinição</button></div></div>`
   : `${lista.map((p, i) => `<div class="pd"><div class="pd-h"><b>${esc(p.titulo)}</b><span><button class="pq cinza" data-e="${i}">Editar</button> <button class="pq verm" data-x="${i}">Excluir</button></span></div>
       <div class="chips">${p.pastas.map(n => `<span class="chip">${esc(n)}</span>`).join('')}</div></div>`).join('') || '<p class="mut">Nenhuma predefinição criada.</p>'}
@@ -238,18 +238,18 @@ async function vHome() {
    <div class="acts"><button class="cinza" data-go="google">${ic('chave')}Login Google</button><button class="cinza" data-go="predef">${ic('lista')}Predefinições</button><button class="cinza" data-go="historico">${ic('relogio')}Histórico</button><button class="cinza" data-go="drive">${ic('ajustes')}Config Drive</button><button class="verm" id="b-sair" title="Fecha o programa neste computador">${ic('power')}Encerrar</button></div></div>
   <div class="grid"><div>
     <div class="card"><h2 class="${editando ? 'warn' : 'ok'}">${editando ? 'Editando Dia do Servir' : 'Criar Novo Dia do Servir'}</h2>
-     <label>Nome do Servir</label><input type="text" id="f-nome" value="${esc(f.nome)}" placeholder="Ex.: Culto de Domingo">
-     <label>Voluntários (fotógrafos)</label>
+     <label for="f-nome">Nome do Servir</label><input type="text" id="f-nome" value="${esc(f.nome)}" placeholder="Ex.: Culto de Domingo">
+     <label for="f-vol">Voluntários (fotógrafos)</label>
      <div class="row"><input type="text" id="f-vol" placeholder="Nome do voluntário"><button class="fix" id="a-vol">Adicionar</button></div>
-     <div class="chips">${f.voluntarios.map((v, i) => `<span class="chip">${esc(v)} <b data-rv="${i}" title="Remover">${ic('x')}</b></span>`).join('') || '<span class="mut mini">Nenhum voluntário</span>'}</div>
-     <label>Pastas de categoria (opcional)</label>
+     <div class="chips">${f.voluntarios.map((v, i) => `<span class="chip">${esc(v)} <button type="button" class="chip-x" data-rv="${i}" title="Remover" aria-label="Remover">${ic('x')}</button></span>`).join('') || '<span class="mut mini">Nenhum voluntário</span>'}</div>
+     <label for="f-pasta">Pastas de categoria (opcional)</label>
      <div class="row"><input type="text" id="f-pasta" placeholder="Ex.: Louvor, Pregação"><button class="fix" id="a-pasta">Adicionar</button><button class="fix cinza" id="a-pred" title="Adicionar um grupo de categorias pronto">${ic('lista')}Predefinições</button></div>
-     <div class="chips">${f.pastas.map((v, i) => `<span class="chip">${esc(v)} <b data-rp="${i}" title="Remover">${ic('x')}</b></span>`).join('') || '<span class="mut mini">Nenhuma pasta</span>'}</div>
-     <label>Pastas do Google Drive (opcional)</label>
-     <div class="row"><input type="text" id="f-dl" placeholder="Link da pasta do Drive"><input type="text" id="f-dn" placeholder="Nome (opcional)"><button class="fix" id="a-dr">Adicionar</button></div>
+     <div class="chips">${f.pastas.map((v, i) => `<span class="chip">${esc(v)} <button type="button" class="chip-x" data-rp="${i}" title="Remover" aria-label="Remover">${ic('x')}</button></span>`).join('') || '<span class="mut mini">Nenhuma pasta</span>'}</div>
+     <label for="f-dl">Pastas do Google Drive (opcional)</label>
+     <div class="row"><input type="text" id="f-dl" placeholder="Link da pasta do Drive"><input type="text" id="f-dn" aria-label="Nome da pasta do Drive (opcional)" placeholder="Nome (opcional)"><button class="fix" id="a-dr">Adicionar</button></div>
      ${f.drives.map((d, i) => `<div class="item"><span class="t">${esc(d.nome)}${d.auto ? ' <span class="chip mini">criada automaticamente</span>' : ''}<br><span class="mut mini">${esc(d.link)}</span></span><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('')}
      <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;margin-top:10px"><input type="checkbox" id="f-cdrive" style="margin-top:4px" ${f.criarDrive ? 'checked' : ''}><span>Usar a pasta do Drive como <b>pasta base</b>: criar nela, <b>automaticamente ao iniciar o Servir</b>, as pastas de categoria (com a data de hoje) e adicioná-las às pastas do Drive do Servir, para escolher o destino ao enviar as fotos</span></label>
-     <label>Pasta local do evento (opcional)</label>
+     <label for="f-local">Pasta local do evento (opcional)</label>
      <div class="row"><input type="text" id="f-local" value="${esc(f.local)}" placeholder="Padrão: pasta do aplicativo"><button class="fix cinza" id="p-local">Procurar</button></div>
      <div style="margin-top:14px" class="row"><button class="verde grande" id="b-salvar">${editando ? 'Salvar alterações' : 'Criar e ativar novo Servir'}</button>${editando ? '<button class="cinza grande fix" id="b-canc" style="width:auto">Cancelar</button>' : ''}</div>
     </div>
@@ -260,7 +260,7 @@ async function vHome() {
        <button class="verde pq" data-at="${esc(d.id)}">Ativar</button><button class="pq" data-ed="${esc(d.id)}">Editar</button><button class="verm pq" data-ex="${esc(d.id)}">Excluir</button></div>`).join('') || '<p class="mut">Nenhum dia de servir criado ainda.</p>'}
     </div>
     <div class="card"><h2>Rede local (várias estações)</h2>
-     <div class="row"><select id="n-modo"><option value="lider" ${r.modo === 'lider' ? 'selected' : ''}>Estação Líder</option><option value="auxiliar" ${r.modo === 'auxiliar' ? 'selected' : ''}>Estação Auxiliar</option></select><button class="fix cinza" id="n-rein">Reiniciar rede</button></div>
+     <div class="row"><select id="n-modo" aria-label="Papel deste computador na rede"><option value="lider" ${r.modo === 'lider' ? 'selected' : ''}>Estação Líder</option><option value="auxiliar" ${r.modo === 'auxiliar' ? 'selected' : ''}>Estação Auxiliar</option></select><button class="fix cinza" id="n-rein">Reiniciar rede</button></div>
      <p class="mut mini">Este computador: ${esc(r.ip)}:${r.porta}</p>
      ${r.modo === 'lider' ? `<h3>Estações conectadas</h3>${r.auxiliares.map(a => `<div class="item"><span>${ic('pc')} ${esc(a.nome)} (${esc(a.ip)}) <span class="mini ${a.versao === st.versao ? 'mut' : 'warn'}">${a.versao ? 'v' + esc(a.versao) : 'versão desconhecida'}${a.versao === st.versao ? '' : ' · diferente deste PC (v' + esc(st.versao) + ') — atualize'}</span></span><span class="ok mini">${pt('ok')}Conectado</span></div>`).join('') || '<p class="mut mini">Nenhuma estação conectada. Ative um Servir para transmitir na rede.</p>'}`
       : (r.lider ? `<p class="ok">${pt('ok')}Líder encontrado</p><p>Evento: <b>${esc(r.lider.nome_evento)}</b><br><span class="mut mini">Líder IP: ${esc(r.lider.ip)}:${r.lider.port}</span></p><button class="verde" id="n-sync">${ic('link')}Conectar e sincronizar</button>`
@@ -376,16 +376,16 @@ async function vDescarregar() {
     <div class="row" style="margin-top:8px"><button class="cinza" id="o-man">${ic('pasta')}Escolher outra pasta de origem</button><button class="cinza fix" id="o-open">Abrir cartão</button></div><div id="o-cand" class="chips"></div>
     <div class="nav"><span></span><button class="verde" id="w-next" disabled>Continuar${ic('seguir')}</button></div>`;
   else if (W.step === 2) corpo = `<h2>Passo 2 · Quem está descarregando?</h2>
-    ${sv ? `<label>Fotógrafo (voluntário)</label><select id="s-fot">${sv.voluntarios.map(v => `<option ${S.sel.fot === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}<option ${S.sel.fot === 'Outro...' ? 'selected' : ''}>Outro...</option></select>
-      <input type="text" id="s-outro" placeholder="Digite o nome do fotógrafo" value="${esc(S.sel.outro || '')}" class="${S.sel.fot === 'Outro...' ? '' : 'hidden'}" style="margin-top:6px">
-      <label>Em qual categoria salvar?</label><select id="s-cat">${cats.map(c => `<option ${S.sel.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>`
-      : `<label>Nome do fotógrafo</label><input type="text" id="s-nome" value="${esc(S.sel.nome || '')}" placeholder="Digite o nome do fotógrafo">
+    ${sv ? `<label for="s-fot">Fotógrafo (voluntário)</label><select id="s-fot">${sv.voluntarios.map(v => `<option ${S.sel.fot === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}<option ${S.sel.fot === 'Outro...' ? 'selected' : ''}>Outro...</option></select>
+      <input type="text" id="s-outro" aria-label="Nome do fotógrafo" placeholder="Digite o nome do fotógrafo" value="${esc(S.sel.outro || '')}" class="${S.sel.fot === 'Outro...' ? '' : 'hidden'}" style="margin-top:6px">
+      <label for="s-cat">Em qual categoria salvar?</label><select id="s-cat">${cats.map(c => `<option ${S.sel.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>`
+      : `<label for="s-nome">Nome do fotógrafo</label><input type="text" id="s-nome" value="${esc(S.sel.nome || '')}" placeholder="Digite o nome do fotógrafo">
       <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" id="s-sub" ${S.sel.sub ? 'checked' : ''}> Criar subpasta com o nome do fotógrafo</label>`}
     ${sv ? '<label>As fotos serão salvas em</label><div class="path" id="s-final">…</div>' : ''}
     <p id="s-erro" class="bad mini"></p>
     <div class="nav"><button class="cinza" id="w-back">${ic('voltar')}Voltar</button><button class="verde" id="w-next">${sv ? 'Iniciar descarregamento' + ic('seguir') : 'Continuar' + ic('seguir')}</button></div>`;
   else if (W.step === 3) corpo = `<h2>Passo 3 · Onde salvar no computador?</h2>
-    <select id="s-dest">${optsDest.map(o => `<option ${S.sel.destR === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}<option ${S.sel.destR === 'Escolher pasta personalizada...' ? 'selected' : ''}>Escolher pasta personalizada...</option></select>
+    <select id="s-dest" aria-label="Onde salvar no computador">${optsDest.map(o => `<option ${S.sel.destR === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}<option ${S.sel.destR === 'Escolher pasta personalizada...' ? 'selected' : ''}>Escolher pasta personalizada...</option></select>
     <label>As fotos serão salvas em</label><div class="path" id="s-final">…</div>
     <div class="nav"><button class="cinza" id="w-back">${ic('voltar')}Voltar</button><button class="verde" id="b-iniciar">Iniciar descarregamento${ic('seguir')}</button></div>`;
   else if (W.step === 4) corpo = `<h2>Passo ${nP(4)} · Copiando fotos…</h2><p class="mut">Não feche esta página nem remova o cartão até terminar.</p>
@@ -394,7 +394,7 @@ async function vDescarregar() {
     <button class="grande verde" id="b-sel" ${st.transferidas ? '' : 'disabled'}>${ic('fotos')}Selecionar fotos</button>
     ${st.editor_disponivel ? `<button class="grande roxo" id="b-edit" style="margin-top:8px" ${st.transferidas ? '' : 'disabled'}>${ic('luz')}Editar fotos</button>` : ''}
     <div class="row" style="margin-top:8px"><button class="cinza" id="b-abrir">${ic('pasta')}Abrir pasta</button><button class="cinza" id="b-novo">${ic('girar')}Novo descarregamento</button></div>
-    <h3>Enviar para o Google Drive (opcional)</h3><select id="s-drive">${optsDrive.map(o => `<option ${S.sel.drive === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}</select>
+    <h3>Enviar para o Google Drive (opcional)</h3><select id="s-drive" aria-label="Pasta de destino no Google Drive">${optsDrive.map(o => `<option ${S.sel.drive === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}</select>
     <button class="lar" id="b-up" style="margin-top:8px;width:100%" ${st.transferidas ? '' : 'disabled'}>${ic('enviar')}Enviar fotos para o Drive</button>
     <p class="mut mini">O envio roda em segundo plano — você já pode iniciar um novo descarregamento. O progresso aparece no canto superior direito.</p>`;
 
@@ -459,7 +459,7 @@ async function vDescarregar() {
         const marc = new Set(W.pastas);
         q('#o-lista').innerHTML = o.detectada ? o.pastas.map(p => `<label><input type="checkbox" value="${esc(p.valor)}" ${marc.has(p.valor) ? 'checked' : ''}> ${esc(p.rotulo)}</label>`).join('') : '<p class="mut">Nenhum cartão detectado.</p>';
         q('#o-lista').querySelectorAll('input').forEach(i => i.onchange = marcarProx);
-        q('#o-cand').innerHTML = o.candidatos.map((c, i) => `<span class="chip" style="cursor:pointer" data-c="${i}">${ic('cartao')}${esc(c.mountpoint)}</span>`).join('');
+        q('#o-cand').innerHTML = o.candidatos.map((c, i) => `<button type="button" class="chip" data-c="${i}">${ic('cartao')}${esc(c.mountpoint)}</button>`).join('');
         q('#o-cand').querySelectorAll('[data-c]').forEach(e => e.onclick = async () => { await api('/api/origem', { body: { path: o.candidatos[e.dataset.c].mountpoint } }); S.oChave = null; W.pastas = []; atualizaOrigem(); });
       }
       marcarProx();
@@ -704,9 +704,9 @@ async function abrirEditor(inicio = 0) {
           <button class="ac" id="e-varias" title="Colar em várias fotos (Ctrl+Shift+V)">${edIc('varias')}<span>Colar em várias</span></button></div>
         <div class="ed-painel" id="e-painel"></div>
         <div class="ed-cpainel hidden" id="e-cbar"><h3>${edIc('cortar')} Cortar e endireitar</h3>
-          <label>Proporção</label><div class="ed-clinha"><select id="e-prop">${ED_PROPORCOES.map(([id, n]) => `<option value="${id}">${n}</option>`).join('')}</select>
+          <label for="e-prop">Proporção</label><div class="ed-clinha"><select id="e-prop">${ED_PROPORCOES.map(([id, n]) => `<option value="${id}">${n}</option>`).join('')}</select>
             <button class="ib borda" id="e-pgirar" title="Trocar entre horizontal e vertical">${edIc('girar')}</button></div>
-          <label>Endireitar <span id="e-angv">0,0°</span></label><input type="range" id="e-ang" min="-45" max="45" step="0.1" value="0" title="Duplo clique: volta para 0°">
+          <label for="e-ang">Endireitar <span id="e-angv">0,0°</span></label><input type="range" id="e-ang" min="-45" max="45" step="0.1" value="0" title="Duplo clique: volta para 0°">
           <button class="ib borda larga" id="e-czerar" title="Volta para a foto inteira e reta">${edIc('zerar')}<span>Redefinir corte</span></button>
           <p class="ed-dica">Arraste os cantos e as bordas; arraste o meio para mover. O corte é feito na resolução original da foto.</p>
           <div class="ed-cbotoes"><button class="ib borda" id="e-ccancelar" title="Desfaz o que mudou no corte (Esc)">Cancelar</button>
@@ -1142,7 +1142,7 @@ async function abrirRevisor() {
   const el = document.createElement('div'); el.className = 'rev';
   el.innerHTML = `<div class="bar"><button class="cinza" id="r-ant">${ic('ant')}Anterior</button><div class="info" id="r-info"></div><button class="cinza" id="r-prox">Próxima${ic('prox')}</button>
     <span class="zgrupo"><button class="cinza" id="r-zm" title="Diminuir zoom (−)">−</button><button class="cinza" id="r-zt" title="Alternar entre tela inteira e 100% (duplo clique na foto)">Tela inteira</button><button class="cinza" id="r-zp" title="Aumentar zoom (+)">+</button></span>
-    <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)">${ic('x')}</button></div>
+    <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)" aria-label="Sair da seleção">${ic('x')}</button></div>
     <div class="stage" id="r-stage"><img id="r-img" alt=""><div class="stamp hidden" id="r-stamp">DESCARTADA</div></div>
     <div class="strip" id="r-strip"></div><div class="kbd">← → navegar · Del/Backspace/X descartar · Ctrl+Z desfazer · Enter finalizar · Esc sair<br>Zoom: roda do mouse ou pinça · arrastar move · duplo clique ou 1 = 100% · + − · 0 = tela inteira</div>`;
   document.body.appendChild(el);
@@ -1217,10 +1217,10 @@ async function vDrive() {
   $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Configuração de pastas</h1><div class="acts"><button class="cinza" data-go="google">${ic('chave')}Conta Google</button><button class="cinza" id="d-v">${ic('voltar')}Voltar</button></div></div>
   <p class="mut">As pastas configuradas valem apenas para o dia de hoje (${new Date().toLocaleDateString('pt-BR')}).</p>
   <div class="grid"><div class="card"><h2>Pastas do Google Drive</h2>
-   <input type="text" id="d-nome" placeholder="Nome de exibição (opcional)" style="margin-bottom:6px"><div class="row"><input type="text" id="d-link" placeholder="Link ou ID da pasta"><button class="fix" id="d-add">Adicionar</button></div>
+   <input type="text" id="d-nome" aria-label="Nome de exibição da pasta do Drive" placeholder="Nome de exibição (opcional)" style="margin-bottom:6px"><div class="row"><input type="text" id="d-link" aria-label="Link ou ID da pasta do Drive" placeholder="Link ou ID da pasta"><button class="fix" id="d-add">Adicionar</button></div>
    ${cfg.pastas.map((p, i) => `<div class="item"><span class="t">${esc(p.nome)}<br><span class="mut mini">${esc(p.link)}</span></span><a href="https://drive.google.com/drive/folders/${encodeURIComponent(p.link.split('/folders/').pop().split('?')[0])}" target="_blank"><button class="pq cinza">Abrir</button></a><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div>
   <div class="card"><h2>Pastas locais de destino</h2>
-   <input type="text" id="l-nome" placeholder="Nome de exibição (opcional)" style="margin-bottom:6px"><div class="row"><input type="text" id="l-cam" placeholder="Caminho da pasta"><button class="fix cinza" id="l-proc">Procurar</button><button class="fix" id="l-add">Adicionar</button></div>
+   <input type="text" id="l-nome" aria-label="Nome de exibição da pasta local" placeholder="Nome de exibição (opcional)" style="margin-bottom:6px"><div class="row"><input type="text" id="l-cam" aria-label="Caminho da pasta local" placeholder="Caminho da pasta"><button class="fix cinza" id="l-proc">Procurar</button><button class="fix" id="l-add">Adicionar</button></div>
    ${cfg.pastas_local.map((p, i) => `<div class="item"><span class="t">${esc(p.nome)}<br><span class="mut mini">${esc(p.caminho)}</span></span><button class="pq cinza" data-ol="${i}">Abrir</button><button class="verm pq" data-rl="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div></div>
   <button class="verde grande" id="d-salvar">Salvar e fechar</button></div>`;
   const q = s => $app.querySelector(s);
@@ -1246,10 +1246,10 @@ async function vGoogle() {
   ${g.disponivel ? '' : '<p class="bad">As bibliotecas do Google não estão instaladas (pip install -r requirements.txt).</p>'}
   <div class="grid"><div class="card"><h2>1. Credenciais OAuth</h2>
     <p>Status: <b class="${g.tem_credenciais ? 'ok' : 'warn'}">${g.tem_credenciais ? pt('ok') + 'credentials.json configurado' : pt('aviso') + 'não configurado'}</b></p>
-    <label>Client ID</label><input type="text" id="g-id"><label>Client Secret</label><input type="password" id="g-sec">
+    <label for="g-id">Client ID</label><input type="text" id="g-id"><label for="g-sec">Client Secret</label><input type="password" id="g-sec">
     <label style="font-weight:400"><input type="checkbox" id="g-show"> mostrar segredo</label>
     <button id="g-salvar" style="margin-top:8px">Salvar credenciais</button>
-    <h3>Ou importe o arquivo JSON do Google Cloud</h3><input type="file" id="g-file" accept=".json">
+    <h3>Ou importe o arquivo JSON do Google Cloud</h3><input type="file" id="g-file" aria-label="Arquivo JSON de credenciais do Google Cloud" accept=".json">
     <p class="mut mini">Também é possível usar o arquivo .env (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET). Veja <code>google_drive_credentials_guide.md</code>.</p></div>
    <div class="card"><h2>2. Login e conexão</h2>
     <p>Token: <b class="${g.tem_token ? 'ok' : 'warn'}">${g.tem_token ? pt('ok') + 'token.json gerado' : pt('aviso') + 'sem login'}</b></p>
@@ -1284,7 +1284,7 @@ function uploadsDesenha(lista) {
   const ativos = lista.filter(j => j.estado === 'fila' || j.estado === 'rodando');
   const feitos = lista.reduce((a, j) => a + j.feitos, 0), total = lista.reduce((a, j) => a + j.total, 0);
   const titulo = ativos.length ? `Enviando ao Drive · ${ativos.length} em andamento` : 'Envios ao Drive concluídos';
-  $up.innerHTML = `<div class="uphead"><b>${ic('nuvem')}${titulo}</b><span><button class="pq cinza" id="up-min" title="${upMin ? 'Expandir' : 'Minimizar'}">${ic(upMin ? 'maximizar' : 'minimizar')}</button>${ativos.length ? '' : `<button class="pq cinza" id="up-x" title="Fechar">${ic('x')}</button>`}</span></div>
+  $up.innerHTML = `<div class="uphead"><b>${ic('nuvem')}${titulo}</b><span><button class="pq cinza" id="up-min" title="${upMin ? 'Expandir' : 'Minimizar'}" aria-label="${upMin ? 'Expandir' : 'Minimizar'}">${ic(upMin ? 'maximizar' : 'minimizar')}</button>${ativos.length ? '' : `<button class="pq cinza" id="up-x" title="Fechar" aria-label="Fechar">${ic('x')}</button>`}</span></div>
     ${upMin ? `<progress value="${total ? feitos / total : 0}" max="1"></progress>` : lista.slice().reverse().map(j => `<div class="upjob ${j.estado}">
       <div class="uprow"><span>${ic(j.estado === 'concluido' ? 'ok' : j.estado === 'erro' ? 'alerta' : j.estado === 'fila' ? 'relogio' : 'enviar', 'st')}<b>${esc(j.fotografo)}</b></span><span class="mini">${j.feitos}/${j.total}</span></div>
       <progress value="${j.progresso}" max="1"></progress>

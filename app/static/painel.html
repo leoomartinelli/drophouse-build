@@ -25,7 +25,8 @@ h2 .mini{font-family:system-ui,sans-serif;text-transform:none}
 .ok{color:var(--lima)}.warn{color:var(--lar)}.bad{color:var(--verm)}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--lima);margin-right:5px;animation:vivo 1.6s ease-in-out infinite}
 .dot.off{background:var(--verm);animation:none}
-@keyframes vivo{50%{box-shadow:0 0 0 5px var(--lima-a)}}
+@keyframes vivo{50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.dot,.pt{animation:none!important}}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 @media(max-width:620px){.tiles{grid-template-columns:repeat(2,1fr)}}
 .tile{background:var(--card);border:1px solid var(--bord);border-radius:20px;padding:16px 18px}
