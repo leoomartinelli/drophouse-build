@@ -375,6 +375,9 @@ async function vDescarregar() {
   else if (W.step >= 4) W.step = sv ? 2 : 3;
   if (sv && W.step === 3) W.step = 2;
   const nP = k => (sv && k > 3 ? k - 1 : k);   // numero exibido do passo
+  // presets para aplicar em todas as fotos direto da tela de concluido (sem abrir o editor)
+  let presets = [];
+  if (W.step === 5 && st.editor_disponivel && st.transferidas) { try { presets = (await api('/api/editor-predefinicoes')).predefinicoes; } catch (e) { } }
 
   // opcoes de destino local e de Drive
   const optsDest = []; if (sv && sv.local_path) optsDest.push({ r: 'Pasta do Servir: ' + (sv.local_nome || sv.local_path), p: sv.local_path });
@@ -431,6 +434,10 @@ async function vDescarregar() {
   else corpo = `<h2 class="ok feito">${ic('ok', 'desenha')}Descarregamento concluído</h2><p class="mut">${esc(tr.msg || '')}${st.transferidas ? ` · ${st.transferidas} foto(s) disponíveis para revisão` : ''}</p>
     <button class="grande verde" id="b-sel" ${st.transferidas ? '' : 'disabled'}>${ic('fotos')}Selecionar fotos</button>
     ${st.editor_disponivel ? `<button class="grande roxo" id="b-edit" style="margin-top:8px" ${st.transferidas ? '' : 'disabled'}>${ic('luz')}Editar fotos</button>` : ''}
+    ${presets.length ? `<div class="preset-todas"><label for="s-pre">Preset em todas as fotos</label>
+      <div class="row"><select id="s-pre"><option value="">Escolha um preset…</option>${presets.map((p, k) => `<option value="${k}">${esc(p.nome)}</option>`).join('')}</select>
+      <button class="fix" id="b-pre" disabled>${ic('varias')}Aplicar</button></div>
+      <p class="mut mini" id="pre-st">Troca a luz e a cor das ${st.transferidas} foto(s) pelas do preset. O corte fica como está e a original continua guardada.</p></div>` : ''}
     <div class="row" style="margin-top:8px"><button class="cinza" id="b-abrir">${ic('pasta')}Abrir pasta</button><button class="cinza" id="b-novo">${ic('girar')}Novo descarregamento</button></div>
     <h3>Enviar para o Google Drive (opcional)</h3><select id="s-drive" aria-label="Pasta de destino no Google Drive">${optsDrive.map(o => `<option ${S.sel.drive === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}</select>
     <button class="lar" id="b-up" style="margin-top:8px;width:100%" ${st.transferidas ? '' : 'disabled'}>${ic('enviar')}Enviar fotos para o Drive</button>
@@ -555,6 +562,28 @@ async function vDescarregar() {
     q('#b-abrir').onclick = () => api('/api/revisor/abrir-pasta', { body: {} }).catch(e => toast(e.message, true));
     q('#b-novo').onclick = async () => { await api('/api/transferencia/nova', { body: {} }); S.sel.nome = ''; S.sel.outro = ''; S.sel.driveManual = false; W.step = 1; W.pastas = []; S.oChave = null; await carregar(); vDescarregar(); };
     q('#s-drive').onchange = e => { S.sel.drive = e.target.value; S.sel.driveManual = true; };
+    // preset em todas as fotos: salva em segundo plano pela fila do editor; o envio ao Drive espera terminar
+    const acompanharPreset = async () => {
+      let t; try { t = await api('/api/transferencia/status'); } catch (e) { return; }
+      const el = q('#pre-st'); if (!el) return pararPoll();
+      if (t.edicoes_pendentes) { el.textContent = `Aplicando o preset… faltam ${t.edicoes_pendentes} foto(s). Você já pode selecionar as fotos; o envio ao Drive espera terminar.`; return; }
+      pararPoll(); if (S.presetAplicado) { el.textContent = `Preset "${S.presetAplicado}" aplicado em todas as fotos.`; S.presetAplicado = ''; }
+      const b = q('#b-pre'), s = q('#s-pre'); if (b && s) b.disabled = !s.value;          // da para aplicar outro em seguida
+    };
+    if (tr.edicoes_pendentes && q('#pre-st')) { acompanharPreset(); iniciarPoll(acompanharPreset, 1500); }
+    if (q('#s-pre')) {
+      q('#s-pre').onchange = e => { q('#b-pre').disabled = !e.target.value; };
+      q('#b-pre').onclick = async ev => {
+        const btn = ev.currentTarget, p = presets[+q('#s-pre').value]; if (!p) return;
+        if (!await confirmar('Preset em todas as fotos', `Aplicar o preset "${p.nome}" nas ${st.transferidas} foto(s)?\n\nA luz e a cor de cada foto são trocadas pelas do preset; o corte fica como está. A original continua guardada (dá para restaurar no editor).`, 'Aplicar em todas', 'Cancelar')) return;
+        btn.disabled = true;
+        try {
+          await api('/api/editor/aplicar', { body: { indices: [...Array(st.transferidas).keys()], ajustes: p.ajustes, grupos: ['luz', 'curva', 'cor'] } });
+          S.presetAplicado = p.nome; toast(`Aplicando o preset "${p.nome}" em ${st.transferidas} foto(s)`);
+          acompanharPreset(); iniciarPoll(acompanharPreset, 1500);
+        } catch (er) { toast(er.message, true); btn.disabled = false; }
+      };
+    }
     q('#b-up').onclick = async ev => {
       const btn = ev.currentTarget; if (btn.disabled) return;
       btn.disabled = true;   // duplo clique nao envia duas vezes
@@ -975,7 +1004,8 @@ async function abrirEditor(inicio = 0) {
     $('#e-angv').textContent = cortando.angulo.toFixed(1).replace('.', ',') + '°';
   }
   img.addEventListener('load', () => setTimeout(posCorte, 0));
-  addEventListener('resize', () => setTimeout(posCorte, 50));
+  const resCorte = () => setTimeout(posCorte, 50);
+  addEventListener('resize', resCorte);
   // maior retangulo da proporcao escolhida, centrado no corte atual, dentro da area valida
   function encaixar() {
     const r = proporcao(); if (!r) return;
@@ -1204,7 +1234,9 @@ async function abrirEditor(inicio = 0) {
     let n = await atualizaLista();
     while (n > 0) { aviso(`Salvando ${n} foto(s) editada(s)…`); await new Promise(r => setTimeout(r, 800)); n = await atualizaLista(); }
     const erros = fotos.filter(f => f.estado.startsWith('erro'));
-    document.removeEventListener('keydown', tecla); zoom.destruir(); el.remove();
+    // solta tudo que prendia o editor na memoria (antes, cada vez que abria e fechava ficava um editor inteiro preso)
+    document.removeEventListener('keydown', tecla); removeEventListener('resize', resCorte); removeEventListener('resize', resPrevia);
+    clearTimeout(tRes); zoom.destruir(); el.remove(); if (urlBlob) { URL.revokeObjectURL(urlBlob); urlBlob = null; }
     if (erros.length) await alerta('Atenção', `${erros.length} foto(s) não puderam ser salvas e ficaram como estavam:\n${erros.map(f => f.nome).join(', ')}`);
     render();
   }
@@ -1244,7 +1276,8 @@ async function abrirEditor(inicio = 0) {
     try { await api(`/api/editor/${i}/restaurar`, { body: {} }); versaoMini[i] = Date.now(); historico.delete(i); await atualizaLista(); carregar(); } catch (e) { toast(e.message, true); }
   };
   let tRes = null;
-  addEventListener('resize', () => { if (!document.body.contains(el)) return; cvDesenha(); clearTimeout(tRes); tRes = setTimeout(agendar, 250); });   // so revela de novo quando parar de redimensionar
+  const resPrevia = () => { cvDesenha(); clearTimeout(tRes); tRes = setTimeout(agendar, 250); };   // so revela de novo quando parar de redimensionar
+  addEventListener('resize', resPrevia);
   painel(); carregar();
 }
 
