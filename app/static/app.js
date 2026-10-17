@@ -51,24 +51,45 @@ async function api(url, opts = {}) {
 function toast(msg, err) {
   let pilha = document.getElementById('toasts');
   if (!pilha) { pilha = document.createElement('div'); pilha.id = 'toasts'; document.body.appendChild(pilha); }
+  pilha.setAttribute('role', 'status'); pilha.setAttribute('aria-live', 'polite');   // leitor de tela anuncia os avisos
   const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
   pilha.appendChild(t); setTimeout(() => t.remove(), err ? 6000 : 3500);
+}
+// janela = dialogo: o foco entra (na opcao segura), Tab fica dentro, Esc cancela e o foco volta para quem abriu.
+// As teclas nao vazam para a tela de baixo (selecao de fotos e editor tem atalhos no documento inteiro).
+function dialogo(bg, cancelar) {
+  const caixa = bg.querySelector('.modal'), antes = document.activeElement;
+  caixa.setAttribute('role', 'dialog'); caixa.setAttribute('aria-modal', 'true'); caixa.tabIndex = -1;
+  const h = caixa.querySelector('h2'); if (h) { h.id = 'dlg-' + Math.random().toString(36).slice(2); caixa.setAttribute('aria-labelledby', h.id); }
+  const focaveis = () => [...caixa.querySelectorAll('button:not([disabled]),input:not([disabled]),select,a[href]')].filter(e => e.offsetParent !== null);
+  bg.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); cancelar(); return; }
+    if (e.key !== 'Tab') return;
+    const f = focaveis(); if (!f.length) return; const k = f.indexOf(document.activeElement);
+    if (e.shiftKey && k <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && k === f.length - 1) { e.preventDefault(); f[0].focus(); }
+  });
+  new MutationObserver((_, o) => { if (!bg.isConnected) { o.disconnect(); if (antes && antes.isConnected && !document.querySelector('.modal-bg')) antes.focus(); } }).observe(bg.parentNode, { childList: true });
+  requestAnimationFrame(() => (caixa.querySelector('[data-foco]') || focaveis()[0] || caixa).focus());
 }
 function modal(html, botoes, larga) {
   return new Promise(res => {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
     bg.innerHTML = `<div class="modal ${larga ? 'larga' : ''}"><div class="mc">${html}</div><div class="btns"></div></div>`;
     const btns = bg.querySelector('.btns');
+    // opcao segura: "continuar" (null), senao "nao" (false), senao a unica resposta; recebe o foco e e o que o Esc escolhe
+    const seguro = botoes.find(b => b.v === null) || botoes.find(b => b.v === false) || botoes[botoes.length - 1];
     botoes.forEach(b => {
-      const el = document.createElement('button'); el.textContent = b.t; if (b.c) el.className = b.c;
+      const el = document.createElement('button'); el.textContent = b.t; if (b.c) el.className = b.c; if (b === seguro) el.dataset.foco = '';
       el.onclick = () => { bg.remove(); res(b.v); }; btns.appendChild(el);
     });
     $modal.appendChild(bg);
+    dialogo(bg, () => { bg.remove(); res(seguro.v); });
   });
 }
 const alerta = (t, m) => modal(`<h2>${esc(t)}</h2>${esc(m)}`, [{ t: 'OK', v: true }]);
-const confirmar = (t, m, sim = 'Sim', nao = 'Não') => modal(`<h2>${esc(t)}</h2>${esc(m)}`, [{ t: nao, v: false, c: 'cinza' }, { t: sim, v: true }]);
-const tri = (t, m, a, b, c) => modal(`<h2>${esc(t)}</h2>${esc(m)}`, [{ t: c, v: null, c: 'cinza' }, { t: b, v: false, c: 'verm' }, { t: a, v: true, c: 'verde' }]);
+// perigo: o "sim" apaga ou encerra algo; fica vermelho em vez de lime
+const confirmar = (t, m, sim = 'Sim', nao = 'Não', perigo) => modal(`<h2>${esc(t)}</h2>${esc(m)}`, [{ t: nao, v: false, c: 'cinza' }, { t: sim, v: true, c: perigo ? 'verm' : '' }]);
 
 // seletor de pasta do servidor (o navegador nao enxerga o disco da maquina)
 function escolherPasta(titulo, inicio) {
@@ -79,6 +100,7 @@ function escolherPasta(titulo, inicio) {
       <div class="btns"><button class="cinza pq" id="fs-new">${ic('add')}Nova pasta</button><span style="flex:1"></span>
       <button class="cinza" id="fs-c">Cancelar</button><button class="verde" id="fs-ok">Selecionar esta pasta</button></div></div>`;
     $modal.appendChild(bg);
+    dialogo(bg, () => { bg.remove(); res(null); });
     let atual = inicio || '';
     const $ = id => bg.querySelector(id);
     async function ir(p) {
@@ -151,6 +173,7 @@ async function mostrarQR() {
   };
   bg.querySelectorAll('#qr-ips [data-i]').forEach(c => c.onclick = () => usa(+c.dataset.i));
   $('#qr-ok').onclick = () => bg.remove();
+  dialogo(bg, () => bg.remove());
   usa(0);
 }
 // conta para o painel que este PC esta ocupado (e por quem); falha aqui nunca atrapalha o descarregamento
@@ -183,6 +206,7 @@ async function abrirPredefinicoes(jaTem) {
     }
     bg.querySelector('#pd-x').onclick = () => { bg.remove(); res(null); };
     ok.onclick = () => { const r = [...new Set(sel.flatMap(x => [...x]))]; bg.remove(); res(r); };
+    dialogo(bg, () => { bg.remove(); res(null); });
     desenha();
   });
 }
@@ -221,7 +245,7 @@ async function vPredef(cache) {
     $app.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { const p = lista[+b.dataset.e]; S.pdEd = { i: +b.dataset.e, titulo: p.titulo, pastas: [...p.pastas] }; vPredef(lista); });
     $app.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
       const p = lista[+b.dataset.x];
-      if (await confirmar('Excluir predefinição', `Excluir a predefinição "${p.titulo}"?\n\nIsso não apaga nenhuma pasta já criada.`, 'Excluir', 'Cancelar') && await salvar(lista.filter((_, k) => k !== +b.dataset.x))) vPredef();
+      if (await confirmar('Excluir predefinição', `Excluir a predefinição "${p.titulo}"?\n\nIsso não apaga nenhuma pasta já criada.`, 'Excluir', 'Cancelar', true) && await salvar(lista.filter((_, k) => k !== +b.dataset.x))) vPredef();
     });
   }
 }
@@ -312,12 +336,12 @@ async function vHome() {
   });
   qa('[data-ex]').forEach(b => b.onclick = async () => {
     const d = dias.find(x => x.id === b.dataset.ex);
-    if (await confirmar('Confirmar Exclusão', `Deseja realmente excluir a configuração do dia de servir '${d.nome}'?\n\nEsta ação apagará apenas esta configuração no painel, sem apagar nenhuma foto salva.`)) {
+    if (await confirmar('Excluir Dia de Servir', `Excluir o Dia de Servir "${d.nome}"?\n\nSai só a configuração do painel; nenhuma foto salva é apagada.`, 'Excluir', 'Cancelar', true)) {
       await api('/api/servir/' + d.id, { method: 'DELETE' }); vHome();
     }
   });
   q('#b-sair').onclick = async () => {
-    if (!await confirmar('Encerrar programa', 'Fechar o Descarregador de Fotos neste computador?\n\nEnvios ao Drive em andamento serão interrompidos. Para abrir de novo, clique no ícone do programa.', 'Encerrar', 'Cancelar')) return;
+    if (!await confirmar('Encerrar programa', 'Fechar o Descarregador de Fotos neste computador?\n\nEnvios ao Drive em andamento serão interrompidos. Para abrir de novo, clique no ícone do programa.', 'Encerrar', 'Cancelar', true)) return;
     try { await api('/api/encerrar', { body: {} }); } catch (e) { }
     pararPoll(); $app.innerHTML = '<div class="wrap"><div class="card"><h2>Programa encerrado</h2><p class="mut">Pode fechar esta aba. Para abrir de novo, clique no ícone do Descarregador de Fotos.</p></div></div>';
     S.encerrado = true;
@@ -539,7 +563,7 @@ async function vDescarregar() {
 }
 
 async function finalizarServir(ignorar) {
-  if (!ignorar && !await confirmar('Finalizar Servir', 'Tem certeza que deseja finalizar este Servir e enviar todos os dados para o webhook?')) return;
+  if (!ignorar && !await confirmar('Finalizar Servir', 'Tem certeza que deseja finalizar este Servir e enviar todos os dados para o webhook?', 'Finalizar Servir', 'Cancelar')) return;
   const b = document.getElementById('b-fin'); if (b) { b.disabled = true; b.textContent = 'Enviando...'; }
   try {
     const r = await api('/api/servir/finalizar', { body: { ignorar_erros: !!ignorar } });
@@ -790,7 +814,7 @@ async function abrirEditor(inicio = 0) {
       if (!pre.predefinicoes.length) return;
       const nomes = pre.predefinicoes.map((p, k) => `${k + 1}. ${p.nome}`).join('\n');
       const k = +prompt(`Qual predefinição excluir? Digite o número:\n\n${nomes}`) - 1, p = pre.predefinicoes[k]; if (!p) return;
-      if (!await confirmar('Excluir predefinição', `Excluir a predefinição "${p.nome}"?`, 'Excluir', 'Cancelar')) return;
+      if (!await confirmar('Excluir predefinição', `Excluir a predefinição "${p.nome}"?`, 'Excluir', 'Cancelar', true)) return;
       pre.predefinicoes = (await api('/api/editor-predefinicoes?nome=' + encodeURIComponent(p.nome), { method: 'DELETE' })).predefinicoes; painel(); mostraValores();
     };
     const cv = $('#e-cv');
@@ -1000,7 +1024,7 @@ async function abrirEditor(inicio = 0) {
       const bg = document.createElement('div'); bg.className = 'modal-bg';
       bg.innerHTML = `<div class="modal" style="white-space:normal;max-width:400px"><h2>Copiar ajustes</h2><p class="mut mini">Escolha o que copiar desta foto. Depois use "Colar" (Ctrl+V) em outra foto ou "Colar em várias…".</p>
         ${Object.entries(pre.grupos).map(([g, n]) => `<label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" value="${g}" ${edCopia.grupos.includes(g) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}
-        <div class="btns"><button class="cinza" id="cp-x">Cancelar</button><button class="verde" id="cp-ok">Copiar</button></div></div>`;
+        <div class="btns"><button class="cinza" id="cp-x">Cancelar</button><button class="verde" id="cp-ok" data-foco>Copiar</button></div></div>`;
       $modal.appendChild(bg);
       const fecha = ok => {
         const g = [...bg.querySelectorAll('input:checked')].map(c => c.value); bg.remove();
@@ -1008,7 +1032,7 @@ async function abrirEditor(inicio = 0) {
         res();
       };
       bg.querySelector('#cp-x').onclick = () => fecha(false); bg.querySelector('#cp-ok').onclick = () => fecha(true);
-      bg.querySelector('#cp-ok').focus();
+      dialogo(bg, () => fecha(false));
     });
   }
   // mesma regra do servidor (editor.mesclar): so os grupos copiados mudam
@@ -1132,7 +1156,7 @@ async function abrirEditor(inicio = 0) {
   $('#e-copiar').onclick = copiar; $('#e-colar').onclick = colar; $('#e-varias').onclick = colarEmVarias;
   $('#e-zerar').onclick = () => { if (!aj) return; aj = zerados(); mudou(); };
   $('#e-rest').onclick = async () => {
-    if (!await confirmar('Restaurar original', `Desfazer todas as edições de "${fotos[i].nome}" e voltar à foto original?`, 'Restaurar', 'Cancelar')) return;
+    if (!await confirmar('Restaurar original', `Desfazer todas as edições de "${fotos[i].nome}" e voltar à foto original?`, 'Restaurar original', 'Cancelar', true)) return;
     try { await api(`/api/editor/${i}/restaurar`, { body: {} }); versaoMini[i] = Date.now(); historico.delete(i); await atualizaLista(); carregar(); } catch (e) { toast(e.message, true); }
   };
   addEventListener('resize', () => { if (document.body.contains(el)) { cvDesenha(); agendar(); } });
@@ -1176,7 +1200,7 @@ async function abrirRevisor() {
   async function finalizar() {
     let msg = 'Revisão terminada! Nenhuma foto foi apagada.';
     if (desc.size) {
-      if (!await confirmar('Confirmar Exclusão', `Você marcou ${desc.size} foto(s) para exclusão.\n\nElas serão apagadas permanentemente do computador.\nDeseja continuar?`, 'Apagar', 'Voltar')) return;
+      if (!await confirmar('Apagar fotos', `Você marcou ${desc.size} foto(s) para apagar.\n\nElas serão apagadas permanentemente do computador.`, `Apagar ${desc.size} foto(s)`, 'Voltar', true)) return;
     }
     try {
       const r = await api('/api/revisor/finalizar', { body: { descartar: [...desc] } });
@@ -1188,7 +1212,9 @@ async function abrirRevisor() {
     } catch (e) { toast(e.message, true); }
   }
   async function sair() {
-    const r = await tri('Finalizar Seleção', "Deseja salvar suas escolhas e finalizar a revisão?\n\n- 'Salvar': aplica as exclusões permanentemente.\n- 'Sair sem salvar': fecha mantendo todas as fotos.\n- 'Continuar': volta à revisão.", 'Salvar', 'Sair sem salvar', 'Continuar');
+    // cada botao diz o que faz; apagar fica em vermelho e a opcao com foco (e do Esc) e continuar revisando
+    const r = await modal(`<h2>Sair da seleção</h2>${esc(desc.size ? `Você marcou ${desc.size} foto(s) para descartar.` : 'Nenhuma foto foi marcada para descartar.')}`,
+      [{ t: 'Continuar revisando', v: null, c: 'cinza' }, { t: 'Sair e manter todas', v: false, c: 'cinza' }, { t: desc.size ? 'Apagar as descartadas e sair' : 'Finalizar seleção', v: true, c: desc.size ? 'verm' : '' }]);
     if (r === true) finalizar(); else if (r === false) fechar();
   }
   function tecla(e) {
@@ -1214,7 +1240,7 @@ async function vHistorico() {
   ${h.map(x => { const d = (x.data || '').split('-'); const dt = d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : x.data;
     return `<div class="item"><span class="t"><b>${esc(x.fotografo)}</b> <span class="mut">· ${esc(dt)} às ${esc(x.hora)}</span><br>${x.descarregadas} copiadas · ${x.selecionadas} selecionadas<br><span class="mut mini">${esc(x.destino)}</span></span><button class="pq cinza" data-p="${esc(x.destino)}">${ic('pasta')}Abrir pasta</button></div>`; }).join('') || '<p class="mut">Nenhum registro de descarregamento encontrado.</p>'}</div>`;
   $app.querySelector('#h-v').onclick = () => ir('home');
-  $app.querySelector('#h-limpar').onclick = async () => { if (await confirmar('Limpar Histórico', 'Deseja realmente limpar todo o histórico de dados?')) { await api('/api/historico', { method: 'DELETE' }); vHistorico(); } };
+  $app.querySelector('#h-limpar').onclick = async () => { if (await confirmar('Limpar histórico', 'Apagar todo o histórico de descarregamentos?\n\nAs fotos não são apagadas.', 'Limpar histórico', 'Cancelar', true)) { await api('/api/historico', { method: 'DELETE' }); vHistorico(); } };
   $app.querySelectorAll('[data-p]').forEach(b => b.onclick = () => api('/api/fs/abrir', { body: { path: b.dataset.p } }).catch(() => alerta('Pasta Não Encontrada', `A pasta '${b.dataset.p}' não existe ou foi movida/deletada.`)));
 }
 
@@ -1276,7 +1302,7 @@ async function vGoogle() {
     } catch (e) { toast(e.message, true); }
   };
   q('#g-test').onclick = async () => { q('#g-msg').textContent = 'Testando a conexão com o Google Drive…'; try { const c = await api('/api/google/testar', { body: {} }); q('#g-conta').textContent = `${c.nome} (${c.email})`; q('#g-msg').textContent = `Conexão funcionando. Logado como ${c.email}`; } catch (e) { q('#g-msg').className = 'bad'; q('#g-msg').textContent = e.message; } };
-  q('#g-desc').onclick = async () => { if (await confirmar('Confirmar Desconexão', 'Deseja realmente desconectar a conta do Google e remover o token.json?')) { await api('/api/google/desconectar', { body: {} }); toast('Conta desconectada.'); vGoogle(); } };
+  q('#g-desc').onclick = async () => { if (await confirmar('Desconectar conta', 'Desconectar a conta do Google e remover o token.json?', 'Desconectar', 'Cancelar', true)) { await api('/api/google/desconectar', { body: {} }); toast('Conta desconectada.'); vGoogle(); } };
 }
 
 // ---------- painel de envios ao Drive (segundo plano, visivel em qualquer tela) ----------
