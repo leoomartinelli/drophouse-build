@@ -5,6 +5,40 @@ const S = { view: 'home', st: null, editId: null, form: null, sel: {}, origem: n
 
 // ---------- utilidades ----------
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// ---------- icones (SVG de traco, 24x24): um conjunto so para o app inteiro ----------
+const IC = {
+  ant: '<path d="M15 18l-6-6 6-6"/>', prox: '<path d="M9 18l6-6-6-6"/>', baixo: '<path d="M6 9l6 6 6-6"/>',
+  voltar: '<path d="M19 12H5M11 6l-6 6 6 6"/>', seguir: '<path d="M5 12h14M13 6l6 6-6 6"/>', cima: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  desfazer: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/>', refazer: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/>',
+  menos: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/>', mais: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6M11 8v6"/>',
+  comparar: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 4v16"/><path d="M14.5 9h4M14.5 13h4"/>',
+  copiar: '<rect x="9" y="9" width="12" height="12" rx="3"/><path d="M5 15V6a3 3 0 013-3h9"/>',
+  colar: '<path d="M16 4h1a3 3 0 013 3v12a3 3 0 01-3 3H7a3 3 0 01-3-3V7a3 3 0 013-3h1"/><rect x="8" y="2" width="8" height="4" rx="1.5"/>',
+  varias: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  zerar: '<path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/>',
+  original: '<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>',
+  ok: '<path d="M20 6L9 17l-5-5"/>', cortar: '<path d="M6 2v14a2 2 0 002 2h14"/><path d="M18 22V8a2 2 0 00-2-2H2"/>',
+  girar: '<path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/>', lixo: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5a1.5 1.5 0 001.5 1.5h6a1.5 1.5 0 001.5-1.5l1-12.5"/>',
+  add: '<path d="M12 5v14M5 12h14"/>', salvar: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  teclado: '<rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+  conta: '<path d="M2 22l1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="M15 6l3-3a2.1 2.1 0 013 3l-3 3 1 1-2 2-6-6 2-2z"/>',
+  chave: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L20 3M16 7l3 3"/>', lista: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
+  relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', ajustes: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  power: '<path d="M12 3v9"/><path d="M18.4 6.6a9 9 0 11-12.8 0"/>', pasta: '<path d="M3 7.5A2.5 2.5 0 015.5 5H9l2 2.5h7.5A2.5 2.5 0 0121 10v7.5a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 17.5z"/>',
+  nuvem: '<path d="M17.5 19H7a5 5 0 111-9.9A6 6 0 0119.5 11a4 4 0 01-2 8z"/>', enviar: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/>',
+  baixar: '<path d="M12 4v12M7 11l5 5 5-5"/><path d="M5 20h14"/>', pc: '<rect x="3" y="4" width="18" height="12" rx="3"/><path d="M8 20h8M12 16v4"/>',
+  cartao: '<path d="M8 3h7l4 4v11a3 3 0 01-3 3H8a3 3 0 01-3-3V6a3 3 0 013-3z"/><path d="M9.5 7v2M12.5 7v2"/>', pessoa: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+  fotos: '<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>', luz: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor"/>',
+  celular: '<rect x="6" y="2" width="12" height="20" rx="3.5"/><path d="M11 18h2"/>', bandeira: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  link: '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
+  pulso: '<path d="M3 12h4l3-8 4 16 3-8h4"/>', lapis: '<path d="M4 20h4L19 9l-4-4L4 16z"/>', minimizar: '<path d="M6 12h12"/>', maximizar: '<rect x="5" y="5" width="14" height="14" rx="3.5"/>',
+  alerta: '<path d="M10.3 4.3L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 4.3a2 2 0 00-3.4 0z"/><path d="M12 10v3.5M12 17h.01"/>',
+  arquivo: '<path d="M14 3H8a3 3 0 00-3 3v12a3 3 0 003 3h8a3 3 0 003-3V8z"/><path d="M14 3v5h5"/>', pin: '<path d="M12 21s7-6.2 7-12a7 7 0 00-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+  rede: '<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M12 11.5l-5.5 5.5M12 11.5l5.5 5.5"/>',
+};
+const ic = (n, c = '') => `<svg class="ic ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+// bolinha de estado (ok, aviso, procurando...) no lugar dos emojis de status
+const pt = c => `<i class="pt ${c || ''}"></i>`;
 async function api(url, opts = {}) {
   const o = { method: opts.method || 'GET', headers: {} };
   if (opts.body !== undefined) { o.body = JSON.stringify(opts.body); o.headers['Content-Type'] = 'application/json'; if (!opts.method) o.method = 'POST'; }
@@ -42,7 +76,7 @@ function escolherPasta(titulo, inicio) {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
     bg.innerHTML = `<div class="modal larga"><h2>${esc(titulo)}</h2><div class="path" id="fs-p"></div>
       <div class="chips" id="fs-at"></div><div class="fs-list" id="fs-l"></div>
-      <div class="btns"><button class="cinza pq" id="fs-new">+ Nova pasta</button><span style="flex:1"></span>
+      <div class="btns"><button class="cinza pq" id="fs-new">${ic('add')}Nova pasta</button><span style="flex:1"></span>
       <button class="cinza" id="fs-c">Cancelar</button><button class="verde" id="fs-ok">Selecionar esta pasta</button></div></div>`;
     $modal.appendChild(bg);
     let atual = inicio || '';
@@ -51,9 +85,9 @@ function escolherPasta(titulo, inicio) {
       try {
         const d = await api('/api/fs/list?path=' + encodeURIComponent(p || '')); atual = d.path;
         $('#fs-p').textContent = d.path;
-        $('#fs-at').innerHTML = d.atalhos.map((a, i) => `<span class="chip" style="cursor:pointer" data-a="${i}">📌 ${esc(a.nome)}</span>`).join('');
+        $('#fs-at').innerHTML = d.atalhos.map((a, i) => `<span class="chip" style="cursor:pointer" data-a="${i}">${ic('pin')}${esc(a.nome)}</span>`).join('');
         $('#fs-at').querySelectorAll('[data-a]').forEach(e => e.onclick = () => ir(d.atalhos[e.dataset.a].caminho));
-        $('#fs-l').innerHTML = `<div data-p="${esc(d.parent)}">⬆️ ..</div>` + d.pastas.map(n => `<div data-n="${esc(n)}">📁 ${esc(n)}</div>`).join('');
+        $('#fs-l').innerHTML = `<div data-p="${esc(d.parent)}">${ic('cima')}..</div>` + d.pastas.map(n => `<div data-n="${esc(n)}">${ic('pasta')}${esc(n)}</div>`).join('');
         $('#fs-l').querySelector('[data-p]').onclick = () => ir(d.parent);
         $('#fs-l').querySelectorAll('[data-n]').forEach(e => e.onclick = () => ir(d.path.replace(/[\\/]$/, '') + (d.path.includes('\\') ? '\\' : '/') + e.dataset.n));
       } catch (e) { toast(e.message, true); }
@@ -69,9 +103,9 @@ function escolherPasta(titulo, inicio) {
 }
 
 async function carregar() { S.st = await api('/api/state'); const b = document.getElementById('banner'); const u = S.st.update;
-  if (S.st.precisa_reiniciar) { b.classList.remove('hidden'); b.style.background = 'var(--lar)'; b.innerHTML = '⚠️ O programa foi atualizado. <b>Feche o servidor (Ctrl+C no terminal) e abra de novo</b> (rodar.sh / rodar.bat) para aplicar as mudanças.'; }
+  if (S.st.precisa_reiniciar) { b.classList.remove('hidden'); b.style.background = 'var(--lar)'; b.innerHTML = ic('alerta') + ' O programa foi atualizado. <b>Feche o servidor (Ctrl+C no terminal) e abra de novo</b> (rodar.sh / rodar.bat) para aplicar as mudanças.'; }
   else if (u && u.disponivel && u.url) { b.style.background = ''; b.classList.remove('hidden');   // programa instalado: baixa o novo instalador
-    b.innerHTML = `${esc(u.msg)} <button id="b-up">⬇ Baixar nova versão</button>`; document.getElementById('b-up').onclick = () => window.open(u.url, '_blank'); }
+    b.innerHTML = `${esc(u.msg)} <button id="b-up">${ic('baixar')}Baixar nova versão</button>`; document.getElementById('b-up').onclick = () => window.open(u.url, '_blank'); }
   else if (u && u.disponivel) { b.style.background = ''; b.classList.remove('hidden'); b.innerHTML = `${esc(u.msg)} <button id="b-up">Atualizar agora</button>`;
     document.getElementById('b-up').onclick = async () => { try { const r = await api('/api/update/aplicar', { body: {} }); toast(r.msg); b.classList.add('hidden'); } catch (e) { toast(e.message, true); } };
   } else b.classList.add('hidden'); }
@@ -91,12 +125,12 @@ async function render() {
 // cria no Drive as pastas de categoria do Servir (com a data de hoje) assim que ele comeca; nao bloqueia a tela
 async function criarPastasDriveAuto(sv) {
   if (!sv || !sv.drive_criar_categorias || !(sv.pastas_predefinidas || []).length || !(sv.drive_folders || []).length) return;
-  toast('☁️ Criando as pastas de categoria no Google Drive...');
+  toast('Criando as pastas de categoria no Google Drive...');
   try {
     const r = (await api(`/api/servir/${sv.id}/drive-pastas`, { body: {} })).resultado, falhas = r.filter(x => !x.ok);
-    if (falhas.length) toast(`⚠️ Drive: ${falhas.length} de ${r.length} pastas com erro (${falhas[0].erro})`, true);
-    else toast(`☁️ ${[...new Set(r.map(x => x.pasta))].length} pasta(s) criadas no Drive e salvas em "Pastas do Google Drive" do Servir`);
-  } catch (e) { toast('⚠️ Pastas no Drive: ' + e.message, true); }
+    if (falhas.length) toast(`Drive: ${falhas.length} de ${r.length} pastas com erro (${falhas[0].erro})`, true);
+    else toast(`${[...new Set(r.map(x => x.pasta))].length} pasta(s) criadas no Drive e salvas em "Pastas do Google Drive" do Servir`);
+  } catch (e) { toast('Pastas no Drive: ' + e.message, true); }
 }
 
 // ---------- painel de acompanhamento: QR code que abre o painel em qualquer celular da mesma rede ----------
@@ -137,7 +171,7 @@ async function abrirPredefinicoes(jaTem) {
         return `<div class="pd"><div class="pd-h"><label><input type="checkbox" data-p="${i}" ${livres.length && marc === livres.length ? 'checked' : ''} ${livres.length ? '' : 'disabled'}> <b>${esc(p.titulo)}</b></label></div>
           <div class="pd-c">${p.pastas.map(n => jaTem.includes(n) ? `<label class="mut"><input type="checkbox" checked disabled> ${esc(n)} <small>(já adicionada)</small></label>`
             : `<label><input type="checkbox" data-c="${i}|${esc(n)}" ${sel[i].has(n) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</div></div>`;
-      }).join('') || '<p class="mut">Nenhuma predefinição criada. Use o botão "📋 Predefinições" do menu superior para criar.</p>';
+      }).join('') || '<p class="mut">Nenhuma predefinição criada. Use o botão "Predefinições" do painel inicial para criar.</p>';
       corpo.querySelectorAll('[data-p]').forEach(cb => {
         const i = +cb.dataset.p, livres = lista[i].pastas.filter(n => !jaTem.includes(n)), marc = livres.filter(n => sel[i].has(n)).length;
         cb.indeterminate = marc > 0 && marc < livres.length;
@@ -159,16 +193,16 @@ async function vPredef(cache) {
   let lista = cache; if (!lista) { try { lista = await api('/api/predefinicoes'); } catch (e) { return alerta('Erro', e.message); } }
   const ed = S.pdEd || null;
   const salvar = async nova => { try { await api('/api/predefinicoes', { method: 'PUT', body: nova }); return true; } catch (e) { toast(e.message, true); return false; } };
-  $app.innerHTML = `<div class="wrap" style="max-width:760px"><div class="topbar"><h1>Predefinições de categorias</h1><div class="acts"><button class="cinza" id="pr-v">⬅ Voltar</button></div></div>
-  <p class="mut">Uma predefinição é um grupo de pastas de categoria (ex.: <b>ELEVE</b> → Voltz, Bold, Burn, A3). No painel inicial, o botão "📋 Predefinições" ao lado das categorias permite escolher quais usar.</p>
+  $app.innerHTML = `<div class="wrap" style="max-width:760px"><div class="topbar"><h1>Predefinições de categorias</h1><div class="acts"><button class="cinza" id="pr-v">${ic('voltar')}Voltar</button></div></div>
+  <p class="mut">Uma predefinição é um grupo de pastas de categoria (ex.: <b>ELEVE</b> → Voltz, Bold, Burn, A3). No painel inicial, o botão "Predefinições" ao lado das categorias permite escolher quais usar.</p>
   ${ed ? `<div class="card"><h2>${ed.i === null ? 'Nova predefinição' : 'Editar predefinição'}</h2>
      <label>Título</label><input type="text" id="pd-t" value="${esc(ed.titulo)}" placeholder="Ex.: ELEVE">
      <label>Nomes das pastas</label><div class="row"><input type="text" id="pd-n" placeholder="Nome da pasta"><button class="fix" id="pd-add">Adicionar</button></div>
-     <div class="chips">${ed.pastas.map((n, k) => `<span class="chip">${esc(n)} <b data-r="${k}">✕</b></span>`).join('') || '<span class="mut mini">Nenhuma pasta</span>'}</div>
-     <div class="nav"><button class="cinza" id="pd-cancel">Cancelar</button><button class="verde" id="pd-save">💾 Salvar predefinição</button></div></div>`
+     <div class="chips">${ed.pastas.map((n, k) => `<span class="chip">${esc(n)} <b data-r="${k}" title="Remover">${ic('x')}</b></span>`).join('') || '<span class="mut mini">Nenhuma pasta</span>'}</div>
+     <div class="nav"><button class="cinza" id="pd-cancel">Cancelar</button><button class="verde" id="pd-save">Salvar predefinição</button></div></div>`
   : `${lista.map((p, i) => `<div class="pd"><div class="pd-h"><b>${esc(p.titulo)}</b><span><button class="pq cinza" data-e="${i}">Editar</button> <button class="pq verm" data-x="${i}">Excluir</button></span></div>
       <div class="chips">${p.pastas.map(n => `<span class="chip">${esc(n)}</span>`).join('')}</div></div>`).join('') || '<p class="mut">Nenhuma predefinição criada.</p>'}
-     <button class="verde grande" id="pd-new" style="margin-top:12px">＋ Nova predefinição</button>`}</div>`;
+     <button class="verde grande" id="pd-new" style="margin-top:12px">${ic('add')}Nova predefinição</button>`}</div>`;
   const q = x => $app.querySelector(x);
   q('#pr-v').onclick = () => { S.pdEd = null; ir('home'); };
   if (ed) {
@@ -201,25 +235,25 @@ async function vHome() {
   const r = st.rede;
   $app.innerHTML = `<div class="wrap">
   <div class="topbar"><div><h1>Painel inicial</h1><div class="mut mini">Descarregador de Fotos · versão ${esc(st.versao)}</div></div>
-   <div class="acts"><button data-go="google">🔑 Login Google</button><button data-go="predef">📋 Predefinições</button><button data-go="historico">📊 Histórico</button><button data-go="drive">⚙️ Config Drive</button><button class="verm" id="b-sair" title="Fecha o programa neste computador">⏻ Encerrar</button></div></div>
+   <div class="acts"><button class="cinza" data-go="google">${ic('chave')}Login Google</button><button class="cinza" data-go="predef">${ic('lista')}Predefinições</button><button class="cinza" data-go="historico">${ic('relogio')}Histórico</button><button class="cinza" data-go="drive">${ic('ajustes')}Config Drive</button><button class="verm" id="b-sair" title="Fecha o programa neste computador">${ic('power')}Encerrar</button></div></div>
   <div class="grid"><div>
-    <div class="card"><h2 class="${editando ? 'warn' : 'ok'}">${editando ? '✏️ Editando Dia do Servir' : 'Criar Novo Dia do Servir'}</h2>
+    <div class="card"><h2 class="${editando ? 'warn' : 'ok'}">${editando ? 'Editando Dia do Servir' : 'Criar Novo Dia do Servir'}</h2>
      <label>Nome do Servir</label><input type="text" id="f-nome" value="${esc(f.nome)}" placeholder="Ex.: Culto de Domingo">
      <label>Voluntários (fotógrafos)</label>
      <div class="row"><input type="text" id="f-vol" placeholder="Nome do voluntário"><button class="fix" id="a-vol">Adicionar</button></div>
-     <div class="chips">${f.voluntarios.map((v, i) => `<span class="chip">${esc(v)} <b data-rv="${i}">✕</b></span>`).join('') || '<span class="mut mini">Nenhum voluntário</span>'}</div>
+     <div class="chips">${f.voluntarios.map((v, i) => `<span class="chip">${esc(v)} <b data-rv="${i}" title="Remover">${ic('x')}</b></span>`).join('') || '<span class="mut mini">Nenhum voluntário</span>'}</div>
      <label>Pastas de categoria (opcional)</label>
-     <div class="row"><input type="text" id="f-pasta" placeholder="Ex.: Louvor, Pregação"><button class="fix" id="a-pasta">Adicionar</button><button class="fix cinza" id="a-pred" title="Adicionar um grupo de categorias pronto">📋 Predefinições</button></div>
-     <div class="chips">${f.pastas.map((v, i) => `<span class="chip">${esc(v)} <b data-rp="${i}">✕</b></span>`).join('') || '<span class="mut mini">Nenhuma pasta</span>'}</div>
+     <div class="row"><input type="text" id="f-pasta" placeholder="Ex.: Louvor, Pregação"><button class="fix" id="a-pasta">Adicionar</button><button class="fix cinza" id="a-pred" title="Adicionar um grupo de categorias pronto">${ic('lista')}Predefinições</button></div>
+     <div class="chips">${f.pastas.map((v, i) => `<span class="chip">${esc(v)} <b data-rp="${i}" title="Remover">${ic('x')}</b></span>`).join('') || '<span class="mut mini">Nenhuma pasta</span>'}</div>
      <label>Pastas do Google Drive (opcional)</label>
      <div class="row"><input type="text" id="f-dl" placeholder="Link da pasta do Drive"><input type="text" id="f-dn" placeholder="Nome (opcional)"><button class="fix" id="a-dr">Adicionar</button></div>
-     ${f.drives.map((d, i) => `<div class="item"><span class="t">☁️ ${esc(d.nome)}${d.auto ? ' <span class="chip mini">criada automaticamente</span>' : ''}<br><span class="mut mini">${esc(d.link)}</span></span><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('')}
+     ${f.drives.map((d, i) => `<div class="item"><span class="t">${esc(d.nome)}${d.auto ? ' <span class="chip mini">criada automaticamente</span>' : ''}<br><span class="mut mini">${esc(d.link)}</span></span><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('')}
      <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;margin-top:10px"><input type="checkbox" id="f-cdrive" style="margin-top:4px" ${f.criarDrive ? 'checked' : ''}><span>Usar a pasta do Drive como <b>pasta base</b>: criar nela, <b>automaticamente ao iniciar o Servir</b>, as pastas de categoria (com a data de hoje) e adicioná-las às pastas do Drive do Servir, para escolher o destino ao enviar as fotos</span></label>
      <label>Pasta local do evento (opcional)</label>
      <div class="row"><input type="text" id="f-local" value="${esc(f.local)}" placeholder="Padrão: pasta do aplicativo"><button class="fix cinza" id="p-local">Procurar</button></div>
-     <div style="margin-top:14px" class="row"><button class="verde grande" id="b-salvar">${editando ? '💾 Salvar Alterações' : '🚀 Criar e Ativar Novo Servir'}</button>${editando ? '<button class="cinza grande fix" id="b-canc" style="width:auto">Cancelar</button>' : ''}</div>
+     <div style="margin-top:14px" class="row"><button class="verde grande" id="b-salvar">${editando ? 'Salvar alterações' : 'Criar e ativar novo Servir'}</button>${editando ? '<button class="cinza grande fix" id="b-canc" style="width:auto">Cancelar</button>' : ''}</div>
     </div>
-    <button class="cinza grande" id="b-avulso">📂 Modo Avulso (Sem Dia de Servir)</button>
+    <button class="cinza grande" id="b-avulso">Modo avulso (sem Dia de Servir)</button>
   </div><div>
     <div class="card"><h2>Dias de Servir Anteriores</h2>
      ${dias.slice().reverse().map(d => `<div class="item"><span class="t"><b>${esc(d.nome)}</b><br><span class="mut mini">${esc(d.data_criacao || '')} · ${d.voluntarios.length} voluntário(s)</span></span>
@@ -228,9 +262,9 @@ async function vHome() {
     <div class="card"><h2>Rede local (várias estações)</h2>
      <div class="row"><select id="n-modo"><option value="lider" ${r.modo === 'lider' ? 'selected' : ''}>Estação Líder</option><option value="auxiliar" ${r.modo === 'auxiliar' ? 'selected' : ''}>Estação Auxiliar</option></select><button class="fix cinza" id="n-rein">Reiniciar rede</button></div>
      <p class="mut mini">Este computador: ${esc(r.ip)}:${r.porta}</p>
-     ${r.modo === 'lider' ? `<h3>Estações conectadas</h3>${r.auxiliares.map(a => `<div class="item"><span>💻 ${esc(a.nome)} (${esc(a.ip)}) <span class="mini ${a.versao === st.versao ? 'mut' : 'warn'}">${a.versao ? 'v' + esc(a.versao) : 'versão desconhecida'}${a.versao === st.versao ? '' : ' ⚠️ diferente deste PC (v' + esc(st.versao) + ') — atualize'}</span></span><span class="ok mini">🟢 Conectado</span></div>`).join('') || '<p class="mut mini">Nenhuma estação conectada. Ative um Servir para transmitir na rede.</p>'}`
-      : (r.lider ? `<p class="ok">🟢 LÍDER ENCONTRADO!</p><p>Evento: <b>${esc(r.lider.nome_evento)}</b><br><span class="mut mini">Líder IP: ${esc(r.lider.ip)}:${r.lider.port}</span></p><button class="verde" id="n-sync">🔗 Conectar e Sincronizar</button>`
-        : '<p class="warn">🔍 Procurando Líder na rede local...</p>')}
+     ${r.modo === 'lider' ? `<h3>Estações conectadas</h3>${r.auxiliares.map(a => `<div class="item"><span>${ic('pc')} ${esc(a.nome)} (${esc(a.ip)}) <span class="mini ${a.versao === st.versao ? 'mut' : 'warn'}">${a.versao ? 'v' + esc(a.versao) : 'versão desconhecida'}${a.versao === st.versao ? '' : ' · diferente deste PC (v' + esc(st.versao) + ') — atualize'}</span></span><span class="ok mini">${pt('ok')}Conectado</span></div>`).join('') || '<p class="mut mini">Nenhuma estação conectada. Ative um Servir para transmitir na rede.</p>'}`
+      : (r.lider ? `<p class="ok">${pt('ok')}Líder encontrado</p><p>Evento: <b>${esc(r.lider.nome_evento)}</b><br><span class="mut mini">Líder IP: ${esc(r.lider.ip)}:${r.lider.port}</span></p><button class="verde" id="n-sync">${ic('link')}Conectar e sincronizar</button>`
+        : `<p class="warn">${pt('busca')}Procurando o Líder na rede local…</p>`)}
     </div></div></div></div>`;
   const q = s => $app.querySelector(s), qa = s => $app.querySelectorAll(s);
   const ler = () => { f.nome = q('#f-nome').value; f.local = q('#f-local').value; f.criarDrive = q('#f-cdrive').checked; };
@@ -325,22 +359,22 @@ async function vDescarregar() {
   const nomeOk = () => { const n = nomeFot(); return n && !/[\\/:*?"<>|]/.test(n) && n !== '.' && n !== '..'; };
   const catAtual = () => sv ? S.sel.cat : 'Raiz (Nenhuma)';
   const subpasta = () => sv ? true : !!S.sel.sub;
-  const resumoOrigem = () => `💾 ${esc(S.oCam || '')} · ${W.pastas.length} pasta(s) selecionada(s)`;
+  const resumoOrigem = () => `${ic('cartao')}<span>${esc(S.oCam || '')} · ${W.pastas.length} pasta(s) selecionada(s)</span>`;
 
   // --- cabecalho + indicador de passos ---
   const passosVis = sv ? PASSOS.filter((_, i) => i !== 2) : PASSOS, atual = nP(W.step);
-  const stepper = `<div class="stepper">${passosVis.map((n, i) => { const k = i + 1; return `<div class="stp ${k < atual ? 'done' : k === atual ? 'cur' : ''}"><span>${k < atual ? '✓' : k}</span><small>${n}</small></div>`; }).join('<i></i>')}</div>`;
+  const stepper = `<div class="stepper">${passosVis.map((n, i) => { const k = i + 1; return `<div class="stp ${k < atual ? 'done' : k === atual ? 'cur' : ''}"><span>${k < atual ? ic('ok') : k}</span><small>${n}</small></div>`; }).join('<i></i>')}</div>`;
   const resumos = [];
   if (W.step > 1) resumos.push({ k: 1, t: resumoOrigem() });
-  if (W.step > 2) resumos.push({ k: 2, t: `👤 <b>${esc(nomeFot())}</b>${sv ? ' · 📂 ' + esc(catAtual()) : ''}` });
-  if (W.step > 3) resumos.push({ k: 3, t: `📁 <span class="mini">${esc(S.finalPath || S.sel.destP)}</span>` });
+  if (W.step > 2) resumos.push({ k: 2, t: `${ic('pessoa')}<span><b>${esc(nomeFot())}</b>${sv ? ' · ' + esc(catAtual()) : ''}</span>` });
+  if (W.step > 3) resumos.push({ k: 3, t: `${ic('pasta')}<span class="mini">${esc(S.finalPath || S.sel.destP)}</span>` });
   const editavel = W.step <= 3;
 
   let corpo = '';
   if (W.step === 1) corpo = `<h2>Passo 1 · De onde vêm as fotos?</h2><p class="mut">Insira o cartão SD no computador. Ele é detectado automaticamente.</p>
     <div id="o-status"></div><div class="checks" id="o-lista" style="margin-top:8px"></div>
-    <div class="row" style="margin-top:8px"><button class="cinza" id="o-man">📂 Escolher outra pasta de origem</button><button class="cinza fix" id="o-open">Abrir cartão</button></div><div id="o-cand" class="chips"></div>
-    <div class="nav"><span></span><button class="verde" id="w-next" disabled>Continuar ➜</button></div>`;
+    <div class="row" style="margin-top:8px"><button class="cinza" id="o-man">${ic('pasta')}Escolher outra pasta de origem</button><button class="cinza fix" id="o-open">Abrir cartão</button></div><div id="o-cand" class="chips"></div>
+    <div class="nav"><span></span><button class="verde" id="w-next" disabled>Continuar${ic('seguir')}</button></div>`;
   else if (W.step === 2) corpo = `<h2>Passo 2 · Quem está descarregando?</h2>
     ${sv ? `<label>Fotógrafo (voluntário)</label><select id="s-fot">${sv.voluntarios.map(v => `<option ${S.sel.fot === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}<option ${S.sel.fot === 'Outro...' ? 'selected' : ''}>Outro...</option></select>
       <input type="text" id="s-outro" placeholder="Digite o nome do fotógrafo" value="${esc(S.sel.outro || '')}" class="${S.sel.fot === 'Outro...' ? '' : 'hidden'}" style="margin-top:6px">
@@ -349,24 +383,24 @@ async function vDescarregar() {
       <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" id="s-sub" ${S.sel.sub ? 'checked' : ''}> Criar subpasta com o nome do fotógrafo</label>`}
     ${sv ? '<label>As fotos serão salvas em</label><div class="path" id="s-final">…</div>' : ''}
     <p id="s-erro" class="bad mini"></p>
-    <div class="nav"><button class="cinza" id="w-back">⬅ Voltar</button><button class="verde" id="w-next">${sv ? '▶ Iniciar Descarregamento' : 'Continuar ➜'}</button></div>`;
+    <div class="nav"><button class="cinza" id="w-back">${ic('voltar')}Voltar</button><button class="verde" id="w-next">${sv ? 'Iniciar descarregamento' + ic('seguir') : 'Continuar' + ic('seguir')}</button></div>`;
   else if (W.step === 3) corpo = `<h2>Passo 3 · Onde salvar no computador?</h2>
     <select id="s-dest">${optsDest.map(o => `<option ${S.sel.destR === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}<option ${S.sel.destR === 'Escolher pasta personalizada...' ? 'selected' : ''}>Escolher pasta personalizada...</option></select>
     <label>As fotos serão salvas em</label><div class="path" id="s-final">…</div>
-    <div class="nav"><button class="cinza" id="w-back">⬅ Voltar</button><button class="verde" id="b-iniciar">▶ Iniciar Descarregamento</button></div>`;
+    <div class="nav"><button class="cinza" id="w-back">${ic('voltar')}Voltar</button><button class="verde" id="b-iniciar">Iniciar descarregamento${ic('seguir')}</button></div>`;
   else if (W.step === 4) corpo = `<h2>Passo ${nP(4)} · Copiando fotos…</h2><p class="mut">Não feche esta página nem remova o cartão até terminar.</p>
     <progress id="pg" value="${tr.progresso || 0}" max="1"></progress><div id="pg-t" class="mut" style="margin-top:6px">${esc(tr.msg || '')}</div>`;
-  else corpo = `<h2 class="ok">Passo ${nP(5)} · Descarregamento concluído!</h2><p class="mut">${esc(tr.msg || '')}${st.transferidas ? ` · ${st.transferidas} foto(s) disponíveis para revisão` : ''}</p>
-    <button class="grande verde" id="b-sel" ${st.transferidas ? '' : 'disabled'}>🖼️ Selecionar Fotos (apagar as ruins)</button>
-    ${st.editor_disponivel ? `<button class="grande roxo" id="b-edit" style="margin-top:8px" ${st.transferidas ? '' : 'disabled'}>🎨 Editar Fotos (luz e cor)</button>` : ''}
-    <div class="row" style="margin-top:8px"><button class="cinza" id="b-abrir">📁 Abrir Pasta</button><button class="cinza" id="b-novo">🔄 Novo Descarregamento</button></div>
+  else corpo = `<h2 class="ok feito">${ic('ok', 'desenha')}Descarregamento concluído</h2><p class="mut">${esc(tr.msg || '')}${st.transferidas ? ` · ${st.transferidas} foto(s) disponíveis para revisão` : ''}</p>
+    <button class="grande verde" id="b-sel" ${st.transferidas ? '' : 'disabled'}>${ic('fotos')}Selecionar fotos</button>
+    ${st.editor_disponivel ? `<button class="grande roxo" id="b-edit" style="margin-top:8px" ${st.transferidas ? '' : 'disabled'}>${ic('luz')}Editar fotos</button>` : ''}
+    <div class="row" style="margin-top:8px"><button class="cinza" id="b-abrir">${ic('pasta')}Abrir pasta</button><button class="cinza" id="b-novo">${ic('girar')}Novo descarregamento</button></div>
     <h3>Enviar para o Google Drive (opcional)</h3><select id="s-drive">${optsDrive.map(o => `<option ${S.sel.drive === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}</select>
-    <button class="lar" id="b-up" style="margin-top:8px;width:100%" ${st.transferidas ? '' : 'disabled'}>⬆ Enviar fotos para o Drive</button>
+    <button class="lar" id="b-up" style="margin-top:8px;width:100%" ${st.transferidas ? '' : 'disabled'}>${ic('enviar')}Enviar fotos para o Drive</button>
     <p class="mut mini">O envio roda em segundo plano — você já pode iniciar um novo descarregamento. O progresso aparece no canto superior direito.</p>`;
 
   $app.innerHTML = `<div class="wrap" style="max-width:760px">
   <div class="topbar"><div><h1>${sv ? esc(sv.nome) : 'Modo avulso'}</h1><div class="mut mini">${sv ? 'Dia do Servir ativo' : 'Sem dia de servir'}</div></div>
-   <div class="acts">${sv && st.rede.modo === 'lider' ? '<button class="pq" id="b-qr">📱 Painel (QR)</button>' : ''}${sv ? '<button class="lar pq" id="b-raiz">📁 Pasta do Servir</button><button class="verm pq" id="b-fin">🏁 Finalizar Servir</button>' : ''}<button class="cinza pq" id="b-voltar">⬅ Início</button></div></div>
+   <div class="acts">${sv && st.rede.modo === 'lider' ? '<button class="pq cinza" id="b-qr">' + ic('celular') + 'Painel (QR)</button>' : ''}${sv ? '<button class="lar pq" id="b-raiz">' + ic('pasta') + 'Pasta do Servir</button><button class="verm pq" id="b-fin">' + ic('bandeira') + 'Finalizar Servir</button>' : ''}<button class="cinza pq" id="b-voltar">${ic('voltar')}Início</button></div></div>
   ${stepper}
   ${resumos.map(r => `<div class="resumo"><span>${r.t}</span>${editavel ? `<button class="pq cinza" data-ed="${r.k}">Alterar</button>` : ''}</div>`).join('')}
   <div class="card passo">${corpo}</div></div>`;
@@ -421,11 +455,11 @@ async function vDescarregar() {
       const chave = JSON.stringify([o.caminho, o.detectada, o.pastas.length, o.candidatos]);
       if (S.oChave !== chave) {
         S.oChave = chave;
-        q('#o-status').innerHTML = o.detectada ? `<span class="${o.manual ? 'az' : 'ok'}">${o.manual ? 'Origem manual' : '✅ Cartão detectado'}: ${esc(o.caminho)}</span>` : '<span class="warn">⏳ Aguardando inserção do Cartão SD...</span>';
+        q('#o-status').innerHTML = o.detectada ? `<span class="${o.manual ? 'az' : 'ok'}">${pt('ok')}${o.manual ? 'Origem manual' : 'Cartão detectado'}: ${esc(o.caminho)}</span>` : `<span class="warn">${pt('busca')}Aguardando o cartão SD…</span>`;
         const marc = new Set(W.pastas);
         q('#o-lista').innerHTML = o.detectada ? o.pastas.map(p => `<label><input type="checkbox" value="${esc(p.valor)}" ${marc.has(p.valor) ? 'checked' : ''}> ${esc(p.rotulo)}</label>`).join('') : '<p class="mut">Nenhum cartão detectado.</p>';
         q('#o-lista').querySelectorAll('input').forEach(i => i.onchange = marcarProx);
-        q('#o-cand').innerHTML = o.candidatos.map((c, i) => `<span class="chip" style="cursor:pointer" data-c="${i}">💾 ${esc(c.mountpoint)}</span>`).join('');
+        q('#o-cand').innerHTML = o.candidatos.map((c, i) => `<span class="chip" style="cursor:pointer" data-c="${i}">${ic('cartao')}${esc(c.mountpoint)}</span>`).join('');
         q('#o-cand').querySelectorAll('[data-c]').forEach(e => e.onclick = async () => { await api('/api/origem', { body: { path: o.candidatos[e.dataset.c].mountpoint } }); S.oChave = null; W.pastas = []; atualizaOrigem(); });
       }
       marcarProx();
@@ -503,12 +537,12 @@ async function finalizarServir(ignorar) {
   try {
     const r = await api('/api/servir/finalizar', { body: { ignorar_erros: !!ignorar } });
     if (r.status === 'confirmar') {
-      if (b) { b.disabled = false; b.textContent = '🏁 Finalizar Servir'; }
+      if (b) { b.disabled = false; b.innerHTML = ic('bandeira') + 'Finalizar Servir'; }
       if (await confirmar('Erro de Comunicação LAN', `Não foi possível obter dados das seguintes estações:\n${r.estacoes_com_erro.join(', ')}\n\nDeseja finalizar o Servir mesmo assim (ignorando estas estações)?`)) return finalizarServir(true);
       return;
     }
     await alerta('Sucesso', 'Servir finalizado com sucesso! Todos os dados foram enviados para o webhook.'); S.entrou = false; S.wiz = null; ir('home');
-  } catch (e) { if (b) { b.disabled = false; b.textContent = '🏁 Finalizar Servir'; } alerta('Erro ao Finalizar', 'Não foi possível enviar os dados ao webhook:\n' + e.message); }
+  } catch (e) { if (b) { b.disabled = false; b.innerHTML = ic('bandeira') + 'Finalizar Servir'; } alerta('Erro ao Finalizar', 'Não foi possível enviar os dados ao webhook:\n' + e.message); }
 }
 
 // ---------- zoom da tela de selecao ----------
@@ -636,21 +670,7 @@ function curvaSuave(pts) {
   };
 }
 
-const ED_ICONES = {
-  ant: '<path d="M15 18l-6-6 6-6"/>', prox: '<path d="M9 18l6-6-6-6"/>',
-  desfazer: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/>', refazer: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/>',
-  menos: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/>', mais: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6M11 8v6"/>',
-  comparar: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><path d="M14.5 9h4M14.5 13h4"/>',
-  copiar: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/>',
-  colar: '<path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
-  varias: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-  zerar: '<path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/>',
-  original: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>',
-  ok: '<path d="M20 6L9 17l-5-5"/>', cortar: '<path d="M6 2v14a2 2 0 002 2h14"/><path d="M18 22V8a2 2 0 00-2-2H2"/>',
-  girar: '<path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/>', lixo: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>', salvar: '<path d="M12 5v14M5 12h14"/>', teclado: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
-  conta: '<path d="M2 22l1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="M15 6l3-3a2.1 2.1 0 013 3l-3 3 1 1-2 2-6-6 2-2z"/>',
-};
-const edIc = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ED_ICONES[n]}</svg>`;
+const edIc = n => ic(n);
 
 async function abrirEditor(inicio = 0) {
   let info, pre; try { [info, pre] = await Promise.all([api('/api/editor'), api('/api/editor-predefinicoes')]); } catch (e) { return toast(e.message, true); }
@@ -723,7 +743,7 @@ async function abrirEditor(inicio = 0) {
     $('#e-painel').innerHTML = `<div class="ed-pre"><span>Predefinições</span><select id="e-pre"><option value="">${preds.length ? 'Aplicar uma predefinição…' : 'Nenhuma salva ainda'}</option>${preds.map((p, k) => `<option value="${k}">${esc(p.nome)}</option>`).join('')}</select>
       <div class="ed-pre-b"><button class="ib borda" id="e-pre-salvar" title="Guarda os ajustes desta foto com um nome, para usar em outras fotos">${edIc('salvar')}<span>Salvar ajustes atuais</span></button>
       <button class="ib borda" id="e-pre-excluir" title="Excluir uma predefinição" ${preds.length ? '' : 'disabled'}>${edIc('lixo')}</button></div></div>` +
-      ED_SECOES.map(([s, nome]) => `<button class="ed-sec" data-s="${s}">${fechadas.has(s) ? '▸' : '▾'} ${nome}</button>
+      ED_SECOES.map(([s, nome]) => `<button class="ed-sec ${fechadas.has(s) ? 'fechada' : ''}" data-s="${s}">${ic('baixo')}${nome}</button>
       <div class="ed-grupo ${fechadas.has(s) ? 'hidden' : ''}">${s === 'curva' ? `<div class="ed-curva"><div class="ed-curva-top"><select id="e-canal">${ED_CANAIS.map(([c, n]) => `<option value="${c}" ${c === canal ? 'selected' : ''}>${n}</option>`).join('')}</select>
         <select id="e-cpronta"><option value="">Curva pronta…</option>${pre.curvas.map((c, k) => `<option value="${k}">${esc(c.nome)}</option>`).join('')}</select></div>
         <canvas id="e-cv"></canvas><div class="ed-dica">Clique para criar um ponto · arraste · duplo clique no ponto remove</div><div class="ed-sub">Paramétrica</div></div>` : ''}
@@ -971,7 +991,7 @@ async function abrirEditor(inicio = 0) {
     if (!aj) return;
     return new Promise(res => {
       const bg = document.createElement('div'); bg.className = 'modal-bg';
-      bg.innerHTML = `<div class="modal" style="white-space:normal;max-width:400px"><h2>📋 Copiar ajustes</h2><p class="mut mini">Escolha o que copiar desta foto. Depois use "Colar" (Ctrl+V) em outra foto ou "Colar em várias…".</p>
+      bg.innerHTML = `<div class="modal" style="white-space:normal;max-width:400px"><h2>Copiar ajustes</h2><p class="mut mini">Escolha o que copiar desta foto. Depois use "Colar" (Ctrl+V) em outra foto ou "Colar em várias…".</p>
         ${Object.entries(pre.grupos).map(([g, n]) => `<label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" value="${g}" ${edCopia.grupos.includes(g) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}
         <div class="btns"><button class="cinza" id="cp-x">Cancelar</button><button class="verde" id="cp-ok">Copiar</button></div></div>`;
       $modal.appendChild(bg);
@@ -994,11 +1014,11 @@ async function abrirEditor(inicio = 0) {
     return n;
   }
   function colar() {
-    if (!edCopia.ajustes) return toast('Copie os ajustes de uma foto primeiro (📋 Copiar).', true);
+    if (!edCopia.ajustes) return toast('Copie os ajustes de uma foto primeiro (Copiar).', true);
     aj = mesclar(aj, edCopia.ajustes, edCopia.grupos); mudou(); toast('Ajustes colados');
   }
   function colarEmVarias() {
-    if (!edCopia.ajustes) return toast('Copie os ajustes de uma foto primeiro (📋 Copiar).', true);
+    if (!edCopia.ajustes) return toast('Copie os ajustes de uma foto primeiro (Copiar).', true);
     marcando = new Set(fotos.map((_, k) => k).filter(k => k !== i)); barraMarcar(); tira();
   }
   function barraMarcar() {
@@ -1025,8 +1045,8 @@ async function abrirEditor(inicio = 0) {
   // --- fotos ---
   function tira() {
     $('#e-strip').innerHTML = fotos.map((f, k) => `<span class="tb ${k === i ? 'cur' : ''} ${marcando && marcando.has(k) ? 'marcada' : ''}" data-k="${k}"><img src="/api/revisor/imagem/${k}?lado=160&v=${v}${versaoMini[k] ? '&m=' + versaoMini[k] : ''}" loading="lazy" title="${esc(f.nome)}">
-      ${marcando ? `<b class="ck">${marcando.has(k) ? '✓' : ''}</b>` : ''}
-      ${f.estado === 'salvando' ? '<b class="bd">salvando…</b>' : f.estado.startsWith('erro') ? '<b class="bd err" title="' + esc(f.estado) + '">erro</b>' : f.editada ? '<b class="bd">✎</b>' : ''}</span>`).join('');
+      ${marcando ? `<b class="ck">${marcando.has(k) ? ic('ok') : ''}</b>` : ''}
+      ${f.estado === 'salvando' ? '<b class="bd">salvando…</b>' : f.estado.startsWith('erro') ? '<b class="bd err" title="' + esc(f.estado) + '">erro</b>' : f.editada ? '<b class="bd">' + ic('lapis') + '</b>' : ''}</span>`).join('');
     $('#e-strip').querySelectorAll('.tb').forEach(t => t.onclick = () => {
       const k = +t.dataset.k;
       if (marcando) { marcando.has(k) ? marcando.delete(k) : marcando.add(k); barraMarcar(); tira(); } else ir(k);
@@ -1097,7 +1117,7 @@ async function abrirEditor(inicio = 0) {
   $('#e-ant').onclick = () => ir(i - 1); $('#e-prox').onclick = () => ir(i + 1); $('#e-antes').onclick = alternarAntes; $('#e-fim').onclick = concluir;
   $('#e-un').onclick = () => passo(-1); $('#e-re').onclick = () => passo(1);
   $('#e-zm').onclick = zoom.menos; $('#e-zp').onclick = zoom.mais; $('#e-zt').onclick = zoom.alternar;
-  $('#e-atalhos').onclick = () => modal(`<h2>⌨ Atalhos do editor</h2><table class="ed-atalhos">${[
+  $('#e-atalhos').onclick = () => modal(`<h2>Atalhos do editor</h2><table class="ed-atalhos">${[
     ['← →', 'Foto anterior / próxima'], ['Roda do mouse, + −', 'Zoom'], ['1 ou duplo clique', '100% (pixel real)'], ['0', 'Tela inteira'],
     ['\\', 'Antes / Depois'], ['R', 'Cortar e endireitar (Enter aplica, Esc cancela)'], ['W', 'Conta-gotas do equilíbrio de branco'], ['Ctrl+Z / Ctrl+Shift+Z', 'Desfazer / Refazer'],
     ['Ctrl+C', 'Copiar ajustes'], ['Ctrl+V', 'Colar nesta foto'], ['Ctrl+Shift+V', 'Colar em várias fotos'],
@@ -1120,9 +1140,9 @@ async function abrirRevisor() {
   const v = Date.now();   // muda a cada abertura: a URL so tem o indice, entao sem isso o navegador reaproveita fotos de descarregamentos anteriores
   const desc = new Set(); const ordemDesc = []; let i = 0; let tempo = null;
   const el = document.createElement('div'); el.className = 'rev';
-  el.innerHTML = `<div class="bar"><button class="cinza" id="r-ant">◀ Anterior</button><div class="info" id="r-info"></div><button class="cinza" id="r-prox">Próxima ▶</button>
+  el.innerHTML = `<div class="bar"><button class="cinza" id="r-ant">${ic('ant')}Anterior</button><div class="info" id="r-info"></div><button class="cinza" id="r-prox">Próxima${ic('prox')}</button>
     <span class="zgrupo"><button class="cinza" id="r-zm" title="Diminuir zoom (−)">−</button><button class="cinza" id="r-zt" title="Alternar entre tela inteira e 100% (duplo clique na foto)">Tela inteira</button><button class="cinza" id="r-zp" title="Aumentar zoom (+)">+</button></span>
-    <button class="verm" id="r-desc">🗑 Descartar (Del)</button><button class="cinza" id="r-undo">↩ Desfazer (Ctrl+Z)</button><button class="verde" id="r-fim">✅ Finalizar Seleção</button><button class="cinza" id="r-sair">✕</button></div>
+    <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)">${ic('x')}</button></div>
     <div class="stage" id="r-stage"><img id="r-img" alt=""><div class="stamp hidden" id="r-stamp">DESCARTADA</div></div>
     <div class="strip" id="r-strip"></div><div class="kbd">← → navegar · Del/Backspace/X descartar · Ctrl+Z desfazer · Enter finalizar · Esc sair<br>Zoom: roda do mouse ou pinça · arrastar move · duplo clique ou 1 = 100% · + − · 0 = tela inteira</div>`;
   document.body.appendChild(el);
@@ -1183,9 +1203,9 @@ async function abrirRevisor() {
 // ---------- HISTORICO ----------
 async function vHistorico() {
   const h = await api('/api/historico');
-  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Histórico de descarregamentos</h1><div class="acts"><button class="verm" id="h-limpar">🗑 Limpar histórico</button><button class="cinza" id="h-v">⬅ Voltar</button></div></div>
+  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Histórico de descarregamentos</h1><div class="acts"><button class="verm" id="h-limpar">${ic('lixo')}Limpar histórico</button><button class="cinza" id="h-v">${ic('voltar')}Voltar</button></div></div>
   ${h.map(x => { const d = (x.data || '').split('-'); const dt = d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : x.data;
-    return `<div class="item"><span class="t">📅 ${esc(dt)} às ${esc(x.hora)}<br>👤 Fotógrafo: ${esc(x.fotografo)}<br>📥 Copiadas: ${x.descarregadas} | ✅ Selecionadas: ${x.selecionadas}<br><span class="mut mini">📁 ${esc(x.destino)}</span></span><button class="pq" data-p="${esc(x.destino)}">📁 Abrir Pasta</button></div>`; }).join('') || '<p class="mut">Nenhum registro de descarregamento encontrado.</p>'}</div>`;
+    return `<div class="item"><span class="t"><b>${esc(x.fotografo)}</b> <span class="mut">· ${esc(dt)} às ${esc(x.hora)}</span><br>${x.descarregadas} copiadas · ${x.selecionadas} selecionadas<br><span class="mut mini">${esc(x.destino)}</span></span><button class="pq cinza" data-p="${esc(x.destino)}">${ic('pasta')}Abrir pasta</button></div>`; }).join('') || '<p class="mut">Nenhum registro de descarregamento encontrado.</p>'}</div>`;
   $app.querySelector('#h-v').onclick = () => ir('home');
   $app.querySelector('#h-limpar').onclick = async () => { if (await confirmar('Limpar Histórico', 'Deseja realmente limpar todo o histórico de dados?')) { await api('/api/historico', { method: 'DELETE' }); vHistorico(); } };
   $app.querySelectorAll('[data-p]').forEach(b => b.onclick = () => api('/api/fs/abrir', { body: { path: b.dataset.p } }).catch(() => alerta('Pasta Não Encontrada', `A pasta '${b.dataset.p}' não existe ou foi movida/deletada.`)));
@@ -1194,15 +1214,15 @@ async function vHistorico() {
 // ---------- CONFIG DRIVE / PASTAS LOCAIS ----------
 async function vDrive() {
   const cfg = S.cfg || (S.cfg = await api('/api/config'));
-  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Configuração de pastas</h1><div class="acts"><button data-go="google">🔑 Conta Google</button><button class="cinza" id="d-v">⬅ Voltar</button></div></div>
+  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Configuração de pastas</h1><div class="acts"><button class="cinza" data-go="google">${ic('chave')}Conta Google</button><button class="cinza" id="d-v">${ic('voltar')}Voltar</button></div></div>
   <p class="mut">As pastas configuradas valem apenas para o dia de hoje (${new Date().toLocaleDateString('pt-BR')}).</p>
   <div class="grid"><div class="card"><h2>Pastas do Google Drive</h2>
    <input type="text" id="d-nome" placeholder="Nome de exibição (opcional)" style="margin-bottom:6px"><div class="row"><input type="text" id="d-link" placeholder="Link ou ID da pasta"><button class="fix" id="d-add">Adicionar</button></div>
-   ${cfg.pastas.map((p, i) => `<div class="item"><span class="t">☁️ ${esc(p.nome)}<br><span class="mut mini">${esc(p.link)}</span></span><a href="https://drive.google.com/drive/folders/${encodeURIComponent(p.link.split('/folders/').pop().split('?')[0])}" target="_blank"><button class="pq cinza">Abrir</button></a><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div>
+   ${cfg.pastas.map((p, i) => `<div class="item"><span class="t">${esc(p.nome)}<br><span class="mut mini">${esc(p.link)}</span></span><a href="https://drive.google.com/drive/folders/${encodeURIComponent(p.link.split('/folders/').pop().split('?')[0])}" target="_blank"><button class="pq cinza">Abrir</button></a><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div>
   <div class="card"><h2>Pastas locais de destino</h2>
    <input type="text" id="l-nome" placeholder="Nome de exibição (opcional)" style="margin-bottom:6px"><div class="row"><input type="text" id="l-cam" placeholder="Caminho da pasta"><button class="fix cinza" id="l-proc">Procurar</button><button class="fix" id="l-add">Adicionar</button></div>
-   ${cfg.pastas_local.map((p, i) => `<div class="item"><span class="t">💻 ${esc(p.nome)}<br><span class="mut mini">${esc(p.caminho)}</span></span><button class="pq cinza" data-ol="${i}">Abrir</button><button class="verm pq" data-rl="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div></div>
-  <button class="verde grande" id="d-salvar">💾 Salvar e Fechar</button></div>`;
+   ${cfg.pastas_local.map((p, i) => `<div class="item"><span class="t">${esc(p.nome)}<br><span class="mut mini">${esc(p.caminho)}</span></span><button class="pq cinza" data-ol="${i}">Abrir</button><button class="verm pq" data-rl="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div></div>
+  <button class="verde grande" id="d-salvar">Salvar e fechar</button></div>`;
   const q = s => $app.querySelector(s);
   $app.querySelectorAll('[data-go]').forEach(b => b.onclick = () => ir(b.dataset.go));
   q('#d-v').onclick = () => { S.cfg = null; ir('home'); };
@@ -1222,19 +1242,19 @@ async function vDrive() {
 // ---------- CONTA GOOGLE ----------
 async function vGoogle() {
   const g = await api('/api/google/status');
-  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Conta Google</h1><div class="acts"><button class="cinza" id="g-v">⬅ Voltar</button></div></div>
+  $app.innerHTML = `<div class="wrap"><div class="topbar"><h1>Conta Google</h1><div class="acts"><button class="cinza" id="g-v">${ic('voltar')}Voltar</button></div></div>
   ${g.disponivel ? '' : '<p class="bad">As bibliotecas do Google não estão instaladas (pip install -r requirements.txt).</p>'}
   <div class="grid"><div class="card"><h2>1. Credenciais OAuth</h2>
-    <p>Status: <b class="${g.tem_credenciais ? 'ok' : 'warn'}">${g.tem_credenciais ? '✅ credentials.json configurado' : '⚠️ não configurado'}</b></p>
+    <p>Status: <b class="${g.tem_credenciais ? 'ok' : 'warn'}">${g.tem_credenciais ? pt('ok') + 'credentials.json configurado' : pt('aviso') + 'não configurado'}</b></p>
     <label>Client ID</label><input type="text" id="g-id"><label>Client Secret</label><input type="password" id="g-sec">
     <label style="font-weight:400"><input type="checkbox" id="g-show"> mostrar segredo</label>
     <button id="g-salvar" style="margin-top:8px">Salvar credenciais</button>
     <h3>Ou importe o arquivo JSON do Google Cloud</h3><input type="file" id="g-file" accept=".json">
     <p class="mut mini">Também é possível usar o arquivo .env (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET). Veja <code>google_drive_credentials_guide.md</code>.</p></div>
    <div class="card"><h2>2. Login e conexão</h2>
-    <p>Token: <b class="${g.tem_token ? 'ok' : 'warn'}">${g.tem_token ? '✅ token.json gerado' : '⚠️ sem login'}</b></p>
+    <p>Token: <b class="${g.tem_token ? 'ok' : 'warn'}">${g.tem_token ? pt('ok') + 'token.json gerado' : pt('aviso') + 'sem login'}</b></p>
     <p class="mut mini">O login abre uma janela do navegador <b>no computador que roda o servidor</b> para você autorizar o acesso.</p>
-    <div class="row"><button class="verde" id="g-login">🔑 Fazer Login no Google</button><button id="g-test">🧪 Testar conexão</button></div>
+    <div class="row"><button class="verde" id="g-login">${ic('chave')}Fazer login no Google</button><button class="cinza" id="g-test">${ic('pulso')}Testar conexão</button></div>
     <button class="verm" id="g-desc" style="margin-top:8px">Desconectar conta</button>
     <p id="g-msg" class="${g.login.estado === 'erro' ? 'bad' : 'mut'}">${esc(g.login.msg)}</p><p id="g-conta" class="ok"></p></div></div></div>`;
   const q = s => $app.querySelector(s);
@@ -1248,7 +1268,7 @@ async function vGoogle() {
         if (s.login.estado !== 'aguardando') { pararPoll(); if (s.login.estado === 'ok') { toast('Login efetuado!'); vGoogle(); } else q('#g-msg').className = 'bad'; } }, 1500);
     } catch (e) { toast(e.message, true); }
   };
-  q('#g-test').onclick = async () => { q('#g-msg').textContent = '🧪 Testando conexão com a API do Google Drive...'; try { const c = await api('/api/google/testar', { body: {} }); q('#g-conta').textContent = `👤 ${c.nome} (${c.email})`; q('#g-msg').textContent = `✅ Conexão bem-sucedida! Logado como ${c.email}`; } catch (e) { q('#g-msg').className = 'bad'; q('#g-msg').textContent = '❌ ' + e.message; } };
+  q('#g-test').onclick = async () => { q('#g-msg').textContent = 'Testando a conexão com o Google Drive…'; try { const c = await api('/api/google/testar', { body: {} }); q('#g-conta').textContent = `${c.nome} (${c.email})`; q('#g-msg').textContent = `Conexão funcionando. Logado como ${c.email}`; } catch (e) { q('#g-msg').className = 'bad'; q('#g-msg').textContent = e.message; } };
   q('#g-desc').onclick = async () => { if (await confirmar('Confirmar Desconexão', 'Deseja realmente desconectar a conta do Google e remover o token.json?')) { await api('/api/google/desconectar', { body: {} }); toast('Conta desconectada.'); vGoogle(); } };
 }
 
@@ -1263,12 +1283,12 @@ function uploadsDesenha(lista) {
   $up.classList.remove('hidden');
   const ativos = lista.filter(j => j.estado === 'fila' || j.estado === 'rodando');
   const feitos = lista.reduce((a, j) => a + j.feitos, 0), total = lista.reduce((a, j) => a + j.total, 0);
-  const titulo = ativos.length ? `☁️ Enviando ao Drive · ${ativos.length} em andamento` : '☁️ Envios ao Drive concluídos';
-  $up.innerHTML = `<div class="uphead"><b>${titulo}</b><span><button class="pq cinza" id="up-min">${upMin ? '▢' : '–'}</button>${ativos.length ? '' : '<button class="pq cinza" id="up-x">✕</button>'}</span></div>
+  const titulo = ativos.length ? `Enviando ao Drive · ${ativos.length} em andamento` : 'Envios ao Drive concluídos';
+  $up.innerHTML = `<div class="uphead"><b>${ic('nuvem')}${titulo}</b><span><button class="pq cinza" id="up-min" title="${upMin ? 'Expandir' : 'Minimizar'}">${ic(upMin ? 'maximizar' : 'minimizar')}</button>${ativos.length ? '' : `<button class="pq cinza" id="up-x" title="Fechar">${ic('x')}</button>`}</span></div>
     ${upMin ? `<progress value="${total ? feitos / total : 0}" max="1"></progress>` : lista.slice().reverse().map(j => `<div class="upjob ${j.estado}">
-      <div class="uprow"><span>${j.estado === 'concluido' ? '✅' : j.estado === 'erro' ? '⚠️' : j.estado === 'fila' ? '⏳' : '⬆'} <b>${esc(j.fotografo)}</b></span><span class="mini">${j.feitos}/${j.total}</span></div>
+      <div class="uprow"><span>${ic(j.estado === 'concluido' ? 'ok' : j.estado === 'erro' ? 'alerta' : j.estado === 'fila' ? 'relogio' : 'enviar', 'st')}<b>${esc(j.fotografo)}</b></span><span class="mini">${j.feitos}/${j.total}</span></div>
       <progress value="${j.progresso}" max="1"></progress>
-      ${j.estado === 'rodando' && (j.atuais || []).length ? `<div class="upfiles">${j.atuais.map(n => `<div title="${esc(n)}">📄 ${esc(n)}</div>`).join('')}</div>` : ''}
+      ${j.estado === 'rodando' && (j.atuais || []).length ? `<div class="upfiles">${j.atuais.map(n => `<div title="${esc(n)}">${esc(n)}</div>`).join('')}</div>` : ''}
       <div class="mini mut">${esc(j.estado === 'concluido' || j.estado === 'erro' ? j.msg : j.estado === 'fila' ? 'Na fila de envio...' : 'Enviando para ' + j.destino)}${j.erros ? ` · <span class="bad">${j.erros} com erro</span>` : ''}</div></div>`).join('')}`;
   $up.querySelector('#up-min').onclick = () => { upMin = !upMin; upUlt = ''; uploadsAtualiza(); };
   const x = $up.querySelector('#up-x'); if (x) x.onclick = async () => { await api('/api/uploads/limpar', { body: {} }); upUlt = ''; uploadsAtualiza(); };
@@ -1299,7 +1319,7 @@ async function uploadsAtualiza() {
   try {
     const l = await api('/api/uploads'); uploadsDesenha(l);
     const ativos = l.filter(j => j.estado === 'fila' || j.estado === 'rodando').length;
-    if (ativos < upAtivosAntes) { const ult = l.filter(j => j.estado === 'concluido' || j.estado === 'erro').pop(); if (ult) toast(ult.estado === 'erro' ? `⚠️ Envio de ${ult.fotografo} terminou com erros` : `✅ Envio de ${ult.fotografo} concluído`, ult.estado === 'erro'); }
+    if (ativos < upAtivosAntes) { const ult = l.filter(j => j.estado === 'concluido' || j.estado === 'erro').pop(); if (ult) toast(ult.estado === 'erro' ? `Envio de ${ult.fotografo} terminou com erros` : `Envio de ${ult.fotografo} concluído`, ult.estado === 'erro'); }
     upAtivosAntes = ativos;
   } catch (e) { }
 }
@@ -1313,8 +1333,8 @@ function bannerAtualizacao(a) {
   const mostrar = a && ['pronta', 'instalando', 'manual'].includes(a.estado);
   $atu.classList.toggle('hidden', !mostrar); if (!mostrar) return;
   $atu.style.background = a.estado === 'instalando' ? 'var(--lar)' : '';
-  $atu.innerHTML = (a.estado === 'instalando' ? '🔄 ' : a.estado === 'pronta' ? '⬇️ ' : '') + esc(a.msg) +
-    (a.estado === 'manual' && a.url ? ' <button id="atu-baixar">⬇ Baixar</button>' : '');
+  $atu.innerHTML = (a.estado === 'instalando' ? ic('girar', 'gira') + ' ' : a.estado === 'pronta' ? ic('baixar') + ' ' : '') + esc(a.msg) +
+    (a.estado === 'manual' && a.url ? ' <button id="atu-baixar">' + ic('baixar') + 'Baixar</button>' : '');
   const b = $atu.querySelector('#atu-baixar'); if (b) b.onclick = () => window.open(a.url, '_blank');
 }
 async function vigiaAtualizacao() {

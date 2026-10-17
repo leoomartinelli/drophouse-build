@@ -28,12 +28,13 @@ h2 .mini{font-family:system-ui,sans-serif;text-transform:none}
 @keyframes vivo{50%{box-shadow:0 0 0 5px var(--lima-a)}}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 @media(max-width:620px){.tiles{grid-template-columns:repeat(2,1fr)}}
-.tile{background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:14px}
+.tile{background:var(--card);border:1px solid var(--bord);border-radius:20px;padding:16px 18px}
 .tile b{display:block;font-family:Anton,'Arial Narrow',sans-serif;font-weight:400;font-size:2.1rem;line-height:1.05;color:var(--lima);font-variant-numeric:tabular-nums}
 .tile span{color:var(--mut);font-size:.8rem}
-.card{background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:16px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--bord);border-radius:20px;padding:18px;margin-bottom:14px}
 .item{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border-radius:4px;
 background:var(--card2);border:1px solid var(--bord);margin:6px 0}
+.item{border-radius:14px}
 .item .t{flex:1;min-width:0;overflow-wrap:anywhere}
 .item.ocup{border-color:rgba(255,176,32,.55)}
 .pill{flex:none;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 10px;color:#131313;background:#8A8A84}
@@ -46,12 +47,14 @@ progress{-webkit-appearance:none;appearance:none;width:100%;height:8px;margin-to
 progress::-webkit-progress-bar{background:var(--card2)}progress::-webkit-progress-value{background:var(--lima);border-radius:999px}
 progress::-moz-progress-bar{background:var(--lima)}
 .vazio{color:var(--mut);margin:4px 0}
+.pt{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mut);margin-right:8px;vertical-align:middle}
+.pt.concluido{background:var(--lima)}.pt.erro{background:var(--lar)}.pt.rodando{background:var(--lima);animation:vivo 1.6s ease-in-out infinite}
 /* quadro de envios ao Drive: o mesmo da tela do PC, juntando todos os PCs */
 #uploads{position:fixed;right:12px;bottom:12px;width:330px;max-height:60vh;overflow:auto;background:var(--card);
-border:1px solid #3C3C3C;border-radius:8px;box-shadow:0 22px 50px -16px rgba(0,0,0,.8);padding:12px 14px;z-index:60}
+border:1px solid #3C3C3C;border-radius:20px;box-shadow:0 22px 50px -16px rgba(0,0,0,.8);padding:12px 14px;z-index:60}
 @media(max-width:620px){#uploads{left:8px;right:8px;bottom:8px;width:auto;max-height:45vh}}
 #uploads .uphead{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;font-size:.9rem}
-#uploads .uphead button{cursor:pointer;border:1px solid #3C3C3C;border-radius:4px;padding:2px 10px;font:inherit;font-weight:700;color:var(--txt);background:transparent}
+#uploads .uphead button{cursor:pointer;border:1px solid #3C3C3C;border-radius:999px;width:28px;height:28px;padding:0;font:inherit;font-weight:700;color:var(--txt);background:transparent}
 #uploads progress{height:9px;margin:3px 0}
 .upjob{padding:6px 0;border-top:1px solid var(--bord)}.upjob:first-of-type{border-top:0}
 .uprow{display:flex;justify-content:space-between;gap:6px}
@@ -105,7 +108,7 @@ function desenha() {
    <div class="tile"><b>${g.pcs_ocupados}</b><span>PC(s) ocupado(s) agora</span></div>
    <div class="tile"><b>${g.pcs_livres}/${g.pcs}</b><span>PC(s) livre(s)${g.pcs_offline ? ` · <span class="bad">${g.pcs_offline} sem resposta</span>` : ''}</span></div>
   </div>
-  ${(D.versoes_diferentes || []).length ? `<div class="card" style="border-color:var(--lar)"><b class="warn">⚠️ PCs com versão diferente do líder (v${esc(D.versao_lider)}):</b> ${D.versoes_diferentes.map(esc).join(', ')}.<br><span class="mini mut">Instale a mesma versão em todos os PCs para que a numeração e as estatísticas fiquem certas.</span></div>` : ''}
+  ${(D.versoes_diferentes || []).length ? `<div class="card" style="border-color:var(--lar)"><b class="warn">PCs com versão diferente do líder (v${esc(D.versao_lider)}):</b> ${D.versoes_diferentes.map(esc).join(', ')}.<br><span class="mini mut">Instale a mesma versão em todos os PCs para que a numeração e as estatísticas fiquem certas.</span></div>` : ''}
   <div class="card"><h2>Descarregando agora</h2>
    ${D.agora.map(a => `<div class="item ocup"><span class="t">${frase(a)}${a.fase === 'copiando' && a.total ? `<progress value="${a.feitos}" max="${a.total}"></progress>` : ''}</span></div>`).join('') || '<p class="vazio">Ninguém descarregando no momento.</p>'}
   </div>
@@ -115,7 +118,7 @@ function desenha() {
      const rot = { livre: 'Livre', ocupado: 'Ocupado', offline: 'Sem resposta' }[st] || 'Conectado';
      const det = st === 'ocupado' ? `<br><span class="mini mut">${a.voluntario ? esc(a.voluntario) + ' · ' : ''}há <span class="tempo" data-s="${a.segundos}">${decorrido(a.segundos)}</span></span>`
        : e.sem_suporte ? '<br><span class="mini mut">versão sem status (atualize esta estação)</span>' : '';
-     return `<div class="item"><span class="t">${e.papel === 'lider' ? '👑' : '💻'} ${nomePC(e)} <span class="mini mut">${esc(e.ip || '')} · ${e.versao ? 'v' + esc(e.versao) : 'versão ?'}</span>${e.online && e.versao !== D.versao_lider ? ' <span class="mini warn">⚠️ versão diferente do líder</span>' : ''}${det}</span><span class="pill ${st}">${rot}</span></div>`;
+     return `<div class="item"><span class="t">${nomePC(e)} <span class="mini mut">${esc(e.ip || '')} · ${e.versao ? 'v' + esc(e.versao) : 'versão ?'}</span>${e.online && e.versao !== D.versao_lider ? ' <span class="mini warn">· versão diferente do líder</span>' : ''}${det}</span><span class="pill ${st}">${rot}</span></div>`;
    }).join('')}
    ${D.estacoes.length === 1 ? '<p class="mut mini">Nenhum PC auxiliar conectado ao líder.</p>' : ''}
   </div>
@@ -123,7 +126,7 @@ function desenha() {
    ${D.ja_descarregaram.map(v => `<div class="item"><span class="t"><b>${esc(v.voluntario)}</b><br><span class="mini mut">${v.vezes} descarregamento(s)${Object.keys(v.categorias).length ? ' · ' + Object.entries(v.categorias).map(([c, n]) => `${esc(c)} (${n})`).join(', ') : ''}${v.estacoes.length ? ' · ' + v.estacoes.map(esc).join(', ') : ''}${v.ultimo ? ' · último às ' + esc(v.ultimo.slice(11, 16)) : ''}</span></span><span class="n">${v.fotos} <span class="mini mut">fotos</span></span></div>`).join('') || '<p class="vazio">Ninguém descarregou ainda.</p>'}
   </div>
   <div class="card"><h2>Faltam descarregar <span class="mut mini">(${D.faltam.length})</span></h2>
-   <div class="chips">${D.faltam.map(f => `<span class="chip ${f.descarregando_agora ? 'agora' : ''}">${esc(f.voluntario)}${f.descarregando_agora ? ' <span class="warn mini">· descarregando agora</span>' : ''}</span>`).join('') || '<p class="vazio ok">Todos os voluntários já descarregaram! 🎉</p>'}</div>
+   <div class="chips">${D.faltam.map(f => `<span class="chip ${f.descarregando_agora ? 'agora' : ''}">${esc(f.voluntario)}${f.descarregando_agora ? ' <span class="warn mini">· descarregando agora</span>' : ''}</span>`).join('') || '<p class="vazio ok">Todos os voluntários já descarregaram.</p>'}</div>
   </div>`;
 }
 
@@ -139,12 +142,12 @@ function desenhaUploads() {
   const ativo = j => j.estado === 'fila' || j.estado === 'rodando';
   const ativos = lista.filter(ativo), feitos = lista.reduce((a, j) => a + j.feitos, 0), total = lista.reduce((a, j) => a + j.total, 0);
   const ordem = lista.slice().reverse().sort((a, b) => ativo(b) - ativo(a));   // em andamento primeiro, depois os mais recentes
-  $up.innerHTML = `<div class="uphead"><b>${ativos.length ? `☁️ Enviando ao Drive · ${ativos.length} em andamento` : '☁️ Envios ao Drive concluídos'}</b><button id="up-min">${upMin ? '▢' : '–'}</button></div>
+  $up.innerHTML = `<div class="uphead"><b>${ativos.length ? `Enviando ao Drive · ${ativos.length} em andamento` : 'Envios ao Drive concluídos'}</b><button id="up-min" aria-label="${upMin ? 'Expandir' : 'Minimizar'}">${upMin ? '+' : '−'}</button></div>
     ${upMin ? `<progress value="${total ? feitos / total : 0}" max="1"></progress>` : ordem.map(j => `<div class="upjob ${esc(j.estado)}">
-      <div class="uprow"><span>${j.estado === 'concluido' ? '✅' : j.estado === 'erro' ? '⚠️' : j.estado === 'fila' ? '⏳' : '⬆'} <b>${esc(j.fotografo)}</b></span><span class="mini">${j.feitos}/${j.total}</span></div>
+      <div class="uprow"><span><i class="pt ${esc(j.estado)}"></i><b>${esc(j.fotografo)}</b></span><span class="mini">${j.feitos}/${j.total}</span></div>
       <div class="mini mut">${j.papel === 'lider' ? 'PC Líder' : 'PC Auxiliar'} (${esc(j.estacao)})</div>
       <progress value="${j.progresso}" max="1"></progress>
-      ${j.estado === 'rodando' && (j.atuais || []).length ? `<div class="upfiles">${j.atuais.map(n => `<div title="${esc(n)}">📄 ${esc(n)}</div>`).join('')}</div>` : ''}
+      ${j.estado === 'rodando' && (j.atuais || []).length ? `<div class="upfiles">${j.atuais.map(n => `<div title="${esc(n)}">${esc(n)}</div>`).join('')}</div>` : ''}
       <div class="mini mut">${esc(j.estado === 'concluido' || j.estado === 'erro' ? j.msg : j.estado === 'fila' ? 'Na fila de envio...' : 'Enviando para ' + j.destino)}${j.erros ? ` · <span class="bad">${j.erros} com erro</span>` : ''}</div></div>`).join('')}`;
   $up.querySelector('#up-min').onclick = () => { upMin = !upMin; try { localStorage.setItem('painelUploadsMin', upMin ? '1' : '0'); } catch (e) { } upUlt = ''; desenhaUploads(); };
   // no celular o quadro fica embaixo: deixa espaco para rolar o painel ate o fim
