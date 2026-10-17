@@ -304,15 +304,14 @@ input[type=checkbox]:checked:disabled{opacity:.45}
 .ed input.trk-sat{background:linear-gradient(90deg,#7a7a7a,#e04a3a)}
 .ed-wb{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.84rem;color:var(--mut);margin:6px 0 12px}.ed-wb span{flex-basis:100%}
 .ed-wb select,.ed-pre select,.ed-curva-top select,.ed-clinha select{flex:1;min-width:0;padding:6px 30px 6px 8px;background-color:var(--bg2);background-position:right 10px center;color:var(--txt);border:1px solid var(--bord2);border-radius:var(--r);font:inherit;font-size:.84rem}
-.ed-wb button{padding:4px 9px}.ed-wb button.ativo{background:var(--lima);border-color:var(--lima);color:var(--lima-ink)}
+.ed-wb button{padding:4px 9px}.ed-wb button.ativo{background:var(--lima-a);border-color:var(--lima);color:var(--lima)}
 .ed .strip .tb{position:relative;flex:none;cursor:pointer}
 .ed .strip .tb img{display:block}.ed .strip .tb.cur img{border-color:var(--lima);opacity:1}
 .ed .strip .bd{position:absolute;right:5px;bottom:5px;display:flex;font-size:.7rem;background:rgba(0,0,0,.8);border-radius:var(--pill);padding:3px;color:var(--lima)}.ed .strip .bd .ic{width:11px;height:11px}
 .ed .strip .bd.err{background:var(--verm)}
 @media(max-width:760px){.ed .ed-corpo{flex-direction:column}.ed-painel{width:auto;max-height:46vh;border-left:0;border-top:1px solid var(--bord)}}
 .ed .bar{gap:6px}.ed .bar button{padding:7px 10px}
-.ed-pre{display:block;font-size:.84rem;color:var(--mut);padding:14px 0 8px}
-.ed-pre>span{display:block;color:var(--txt);font-family:var(--f-titulo);font-size:1rem;letter-spacing:.06em;text-transform:uppercase}
+.ed-pre{font-size:.84rem;color:var(--mut);padding-bottom:12px}.ed-pre .ed-sub:first-child{margin-top:2px}
 .ed-pre select{width:100%;margin:8px 0}
 .ed-pre button{padding:3px 8px;font-size:.8rem}
 .ed-pre-b{display:flex;gap:6px}.ed-pre-b .ib.borda:first-child{flex:1}
@@ -337,7 +336,8 @@ input[type=checkbox]:checked:disabled{opacity:.45}
 .ed .ib.txt{min-width:92px;font-variant-numeric:tabular-nums}
 .ed .ib.rot{background:var(--card);border:1px solid var(--bord);padding:6px 12px}
 .ed .ib.rot:hover{border-color:var(--bord2)}
-.ed .ib.ativo,.ed .ib.rot.ativo{background:var(--lima);border-color:var(--lima);color:var(--lima-ink)}
+/* ferramenta ligada (antes/depois, cortar, conta-gotas): veu lime, nao lime cheio. O lime cheio e so do proximo passo */
+.ed .ib.ativo,.ed .ib.rot.ativo{background:var(--lima-a);border-color:var(--lima);color:var(--lima)}
 .ed-dir{display:flex;align-items:center;justify-content:flex-end;gap:10px}
 .ed-estado{font-size:.78rem;color:var(--mut);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .ed-estado::before{content:"";width:8px;height:8px;border-radius:50%;background:#555;transition:background .2s}
@@ -360,13 +360,13 @@ input[type=checkbox]:checked:disabled{opacity:.45}
   .ed-lado{width:auto;max-height:50vh;border-left:0;border-top:1px solid var(--bord)}.ed-estado{display:none}}
 .ed .ib.borda{background:var(--card);border:1px solid var(--bord);font-size:.8rem;padding:5px 9px}
 .ed .ib.borda:hover{border-color:var(--bord2)}
-/* presets: cartoes (um clique aplica na foto); o que bate com a foto atual fica em destaque */
-.ed-presets{display:flex;flex-direction:column;gap:6px;margin:10px 0 8px}
-.ed-pre .ed-pc{display:flex;flex-direction:column;align-items:stretch;gap:2px;width:100%;background:var(--card);border:1px solid var(--bord);border-radius:var(--r);padding:8px 11px;text-align:left;color:var(--txt);font-weight:400;font-size:.84rem}
+/* presets: grade compacta (um clique aplica na foto); o que bate com a foto atual fica em destaque.
+   A descricao inteira aparece embaixo da grade, sem cortar o texto */
+.ed-presets{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 4px}
+.ed-pre .ed-pc{display:block;width:100%;min-height:38px;background:var(--card);border:1px solid var(--bord);border-radius:var(--r);padding:7px 10px;text-align:left;color:var(--txt);font-weight:600;font-size:.82rem;line-height:1.25}
 .ed-pre .ed-pc:hover{background:var(--card2);border-color:var(--bord2)}
-.ed-pc b{font-weight:600;font-size:.88rem}.ed-pc b i{font-style:normal;font-weight:400;font-size:.74rem;color:var(--fraco);margin-left:4px}
-.ed-pc small{color:var(--mut);font-size:.76rem;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ed-pre .ed-pc.on{border-color:var(--lima);background:var(--lima-a);box-shadow:inset 0 0 0 1px var(--lima)}
+.ed-pre .ed-pc.on{border-color:var(--lima);background:var(--lima-a);color:var(--lima)}
+.ed-pre-desc{font-size:.78rem;line-height:1.4;color:var(--mut);margin:10px 0;min-height:3.3em}.ed-pre-desc b{color:var(--txt);font-weight:600}
 .ed-pre #e-pre-todas{width:100%;justify-content:center;margin-bottom:6px}
 .ed .ib.borda .ic{width:15px;height:15px}
 
@@ -385,6 +385,9 @@ input[type=checkbox]:checked:disabled{opacity:.45}
 .ed-cbox .h-n,.ed-cbox .h-s{left:50%;width:30px;height:12px;margin-left:-15px;cursor:ns-resize}.ed-cbox .h-n{top:0;border-top-width:4px}.ed-cbox .h-s{bottom:0;border-bottom-width:4px}
 .ed-cbox .h-e,.ed-cbox .h-w{top:50%;height:30px;width:12px;margin-top:-15px;cursor:ew-resize}.ed-cbox .h-e{right:0;border-right-width:4px}.ed-cbox .h-w{left:0;border-left-width:4px}
 .ed.modo-corte .ed-acoes,.ed.modo-corte .ed-lado .ed-painel,.ed.modo-corte .ed-rodape{display:none}
+/* cortando, o proximo passo e "Aplicar corte": o Concluir de cima fica discreto */
+.ed.modo-corte #e-fim{background:transparent;border-color:var(--bord2);color:var(--txt)}
+.ed.modo-corte #e-fim:hover{background:var(--card2);border-color:var(--bord2);color:var(--txt);box-shadow:none}
 .ed-cpainel{display:flex;flex-direction:column;gap:6px;padding:16px;flex:1;overflow-y:auto;font-size:.85rem;color:var(--mut)}
 .ed-cpainel h3{display:flex;align-items:center;gap:8px;color:var(--txt);font-family:var(--f-titulo);font-weight:400;font-size:1.05rem;letter-spacing:.06em;margin:0 0 6px}
 .ed-cpainel label{margin:10px 0 0;font-weight:500;font-size:.84rem;color:var(--mut);display:flex;justify-content:space-between}
