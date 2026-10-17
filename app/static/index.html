@@ -3,13 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Descarregador de Fotos</title>
-<link rel="icon" href="/static/housinho.png">
+<meta name="theme-color" content="#131313">
+<title>DropHouse · Descarregador de Fotos</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/housinho.png" sizes="any">
+<link rel="preload" href="/static/fonts/anton-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div id="banner" class="banner hidden"></div>
-<div id="app"></div>
+<header class="marca">
+  <span class="marca-id"><span class="simbolo" aria-hidden="true"></span><span class="wordmark">drop<b>house</b></span></span>
+</header>
+<main id="app"></main>
+<footer class="assina"><span>house de criatividade · creative minds for the kingdom</span><span>love&amp;serve</span></footer>
 <div id="modal-root"></div>
 <script src="/static/app.js"></script>
 </body>

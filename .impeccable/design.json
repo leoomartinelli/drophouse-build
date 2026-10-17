@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-17T14:35:44+00:00",
+  "title": "Design System: DropHouse",
+  "extensions": {
+    "colorMeta": {
+      "lime-house": {
+        "role": "primary",
+        "displayName": "Lime House",
+        "canonical": "#C1FF00",
+        "tonalRamp": [
+          "#3A4C00",
+          "#608000",
+          "#87B200",
+          "#AEE600",
+          "#C7FF1A",
+          "#D7FF5C",
+          "#E9FFA3",
+          "#F9FFE5"
+        ]
+      },
+      "lime-house-claro": {
+        "role": "primary",
+        "displayName": "Lime House claro",
+        "canonical": "#D4FF4D",
+        "tonalRamp": [
+          "#3A4C00",
+          "#618000",
+          "#87B200",
+          "#AEE600",
+          "#C8FF1A",
+          "#D8FF5C",
+          "#E9FFA3",
+          "#F9FFE5"
+        ]
+      },
+      "preto-house": {
+        "role": "neutral",
+        "displayName": "Preto House",
+        "canonical": "#131313",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#8C8C8C",
+          "#ADADAD",
+          "#D1D1D1",
+          "#F2F2F2"
+        ]
+      },
+      "preto-fundo-campo": {
+        "role": "neutral",
+        "displayName": "Preto de campo",
+        "canonical": "#0D0D0D",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#8C8C8C",
+          "#ADADAD",
+          "#D1D1D1",
+          "#F2F2F2"
+        ]
+      },
+      "grafite-card": {
+        "role": "neutral",
+        "displayName": "Grafite card",
+        "canonical": "#1A1A1A",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#8C8C8C",
+          "#ADADAD",
+          "#D1D1D1",
+          "#F2F2F2"
+        ]
+      },
+      "grafite-elevado": {
+        "role": "neutral",
+        "displayName": "Grafite elevado",
+        "canonical": "#212121",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#8C8C8C",
+          "#ADADAD",
+          "#D1D1D1",
+          "#F2F2F2"
+        ]
+      },
+      "linha": {
+        "role": "neutral",
+        "displayName": "Linha",
+        "canonical": "#2B2B2B",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#8C8C8C",
+          "#ADADAD",
+          "#D1D1D1",
+          "#F2F2F2"
+        ]
+      },
+      "linha-forte": {
+        "role": "neutral",
+        "displayName": "Linha forte",
+        "canonical": "#3C3C3C",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#8C8C8C",
+          "#ADADAD",
+          "#D1D1D1",
+          "#F2F2F2"
+        ]
+      },
+      "papel": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "#F4F4EF",
+        "tonalRamp": [
+          "#2D2D1F",
+          "#4C4C34",
+          "#6A6A49",
+          "#88885D",
+          "#A2A277",
+          "#BDBD9E",
+          "#DADAC9",
+          "#F5F5F0"
+        ]
+      },
+      "cinza-texto": {
+        "role": "neutral",
+        "displayName": "Cinza texto",
+        "canonical": "#A3A39C",
+        "tonalRamp": [
+          "#282825",
+          "#42423D",
+          "#5D5D56",
+          "#77776F",
+          "#909088",
+          "#B0B0AA",
+          "#D3D3CF",
+          "#F3F3F2"
+        ]
+      },
+      "cinza-fraco": {
+        "role": "neutral",
+        "displayName": "Cinza fraco",
+        "canonical": "#86867F",
+        "tonalRamp": [
+          "#272725",
+          "#42423E",
+          "#5C5C57",
+          "#767670",
+          "#8F8F89",
+          "#B0B0AB",
+          "#D2D2D0",
+          "#F3F3F2"
+        ]
+      },
+      "vermelho-alerta": {
+        "role": "error",
+        "displayName": "Vermelho alerta",
+        "canonical": "#FF5A47",
+        "tonalRamp": [
+          "#4C0800",
+          "#800D00",
+          "#B21200",
+          "#E61800",
+          "#FF311A",
+          "#FF6D5C",
+          "#FFADA3",
+          "#FFE8E5"
+        ]
+      },
+      "ambar-aviso": {
+        "role": "warning",
+        "displayName": "Âmbar aviso",
+        "canonical": "#FFB020",
+        "tonalRamp": [
+          "#4C3100",
+          "#805200",
+          "#B27300",
+          "#E69400",
+          "#FFAE1A",
+          "#FFC55C",
+          "#FFDEA3",
+          "#FFF6E5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Título de cada tela."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Títulos de cards e janelas."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Botões grandes de ação."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto corrido, botões e rótulos."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Subtítulos de seção e nomes dos passos, caixa alta."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "drop (300) + house (800) no cabeçalho."
+      }
+    },
+    "shadows": [
+      {
+        "name": "janela",
+        "value": "0 30px 70px -20px rgba(0,0,0,.8)",
+        "purpose": "Janelas sobre véu escuro com desfoque de 5px."
+      },
+      {
+        "name": "flutuante",
+        "value": "0 22px 50px -16px rgba(0,0,0,.8)",
+        "purpose": "Quadro de envios ao Drive."
+      },
+      {
+        "name": "aviso",
+        "value": "0 14px 34px -10px rgba(0,0,0,.7)",
+        "purpose": "Avisos rápidos."
+      },
+      {
+        "name": "botao-hover",
+        "value": "0 6px 16px -8px rgba(0,0,0,.7)",
+        "purpose": "Botão principal no hover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "sai",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Desaceleração padrão de entradas e respostas."
+      },
+      {
+        "name": "entra-passo",
+        "value": "0.45s",
+        "purpose": "Entrada do cartão do passo (sobe 10px e aparece)."
+      },
+      {
+        "name": "janela",
+        "value": "0.35s",
+        "purpose": "Janela sobe 12px e aparece."
+      },
+      {
+        "name": "aviso",
+        "value": "0.42s",
+        "purpose": "Aviso sobe 14px e aparece."
+      },
+      {
+        "name": "check",
+        "value": "0.7s",
+        "purpose": "Check de concluído se desenha."
+      },
+      {
+        "name": "progresso",
+        "value": "1.8s linear infinite",
+        "purpose": "Brilho que corre na barra enquanto copia ou envia."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "celular",
+        "value": "520px"
+      },
+      {
+        "name": "painel-celular",
+        "value": "620px"
+      },
+      {
+        "name": "editor-empilha",
+        "value": "760px"
+      },
+      {
+        "name": "uma-coluna",
+        "value": "820px"
+      },
+      {
+        "name": "quadro-envios",
+        "value": "900px"
+      },
+      {
+        "name": "editor-compacto",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "O próximo passo; um por tela.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg>Continuar</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;flex-direction:row-reverse;background:#C1FF00;color:#131313;border:1px solid #C1FF00;border-radius:999px;padding:10px 18px;font:600 .92rem 'Inter Tight',system-ui,sans-serif;cursor:pointer;transition:background .15s,box-shadow .2s,transform .12s cubic-bezier(.16,1,.3,1)}.ds-btn-primary:hover{background:#D4FF4D;border-color:#D4FF4D;transform:translateY(-1px);box-shadow:0 6px 16px -8px rgba(0,0,0,.7)}.ds-btn-primary:active{transform:scale(.97)}.ds-btn-primary:focus-visible{outline:2px solid #C1FF00;outline-offset:2px}"
+    },
+    {
+      "name": "Botão discreto",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ações secundárias: voltar, cancelar, abrir pasta.",
+      "html": "<button class=\"ds-btn-ghost\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M19 12H5M11 6l-6 6 6 6\"/></svg>Voltar</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;color:#F4F4EF;border:1px solid #3C3C3C;border-radius:999px;padding:10px 18px;font:600 .92rem 'Inter Tight',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,transform .12s}.ds-btn-ghost:hover{background:rgba(255,255,255,.05);border-color:#5A5A5A;transform:translateY(-1px)}.ds-btn-ghost:focus-visible{outline:2px solid #C1FF00;outline-offset:2px}"
+    },
+    {
+      "name": "Botão de perigo",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Excluir, descartar, encerrar.",
+      "html": "<button class=\"ds-btn-danger\">Excluir</button>",
+      "css": ".ds-btn-danger{background:transparent;color:#FF5A47;border:1px solid rgba(255,90,71,.5);border-radius:999px;padding:10px 18px;font:600 .92rem 'Inter Tight',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s}.ds-btn-danger:hover{background:rgba(255,90,71,.13);border-color:#FF5A47}.ds-btn-danger:focus-visible{outline:2px solid #C1FF00;outline-offset:2px}"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de texto escavado um degrau abaixo do fundo.",
+      "html": "<input class=\"ds-input\" placeholder=\"Ex.: Culto de Domingo\">",
+      "css": ".ds-input{width:260px;background:#0D0D0D;color:#F4F4EF;border:1px solid #2B2B2B;border-radius:12px;padding:11px 14px;font:15px 'Inter Tight',system-ui,sans-serif;caret-color:#C1FF00}.ds-input::placeholder{color:#86867F}.ds-input:hover{border-color:#3C3C3C}.ds-input:focus{outline:none;border-color:#C1FF00}.ds-input:focus-visible{outline:3px solid rgba(193,255,0,.12)}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Voluntários e categorias, com botão de remover.",
+      "html": "<span class=\"ds-chip\">Ana<button class=\"ds-chip-x\" aria-label=\"Remover\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\"><path d=\"M18 6L6 18M6 6l12 12\"/></svg></button></span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:8px;background:#212121;color:#F4F4EF;border:1px solid #2B2B2B;border-radius:999px;padding:5px 13px;font:500 .86rem 'Inter Tight',system-ui,sans-serif}.ds-chip-x{display:inline-flex;margin-right:-7px;padding:3px;border:0;border-radius:50%;background:transparent;color:#86867F;cursor:pointer}.ds-chip-x:hover{color:#FF5A47;background:rgba(255,90,71,.13)}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Container padrão em grafite.",
+      "html": "<div class=\"ds-card\"><h2 class=\"ds-card-t\">Dias de Servir anteriores</h2><p class=\"ds-card-p\">Nenhum dia de servir criado ainda.</p></div>",
+      "css": ".ds-card{background:#1A1A1A;border:1px solid #2B2B2B;border-radius:20px;padding:22px;color:#F4F4EF;font:15px/1.5 'Inter Tight',system-ui,sans-serif;max-width:360px}.ds-card-t{font:400 1.25rem/1.1 Anton,'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.02em;margin:0 0 .9rem}.ds-card-p{color:#A3A39C;margin:0}"
+    },
+    {
+      "name": "Indicador de passos",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Assinatura do assistente de descarregar.",
+      "html": "<div class=\"ds-steps\"><span class=\"ds-st ds-done\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6L9 17l-5-5\"/></svg></span><i class=\"ds-ln ds-on\"></i><span class=\"ds-st ds-cur\">2</span><i class=\"ds-ln\"></i><span class=\"ds-st\">3</span></div>",
+      "css": ".ds-steps{display:flex;align-items:center;width:280px}.ds-ln{flex:1;height:2px;background:#2B2B2B;margin:0 8px}.ds-ln.ds-on{background:#C1FF00}.ds-st{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 1.02rem Anton,sans-serif;color:#86867F;border:1.5px solid #3C3C3C}.ds-done{border-color:#C1FF00;color:#C1FF00}.ds-cur{background:#C1FF00;border-color:#C1FF00;color:#131313;outline:1.5px solid rgba(193,255,0,.45);outline-offset:4px}"
+    },
+    {
+      "name": "Aviso",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Aviso rápido em pílula no rodapé.",
+      "html": "<div class=\"ds-toast\">Predefinição salva!</div><div class=\"ds-toast ds-err\">Pasta não encontrada</div>",
+      "css": ".ds-toast{display:inline-block;margin:4px;background:#F4F4EF;color:#131313;font:600 15px 'Inter Tight',system-ui,sans-serif;padding:12px 22px;border-radius:999px;box-shadow:0 14px 34px -10px rgba(0,0,0,.7)}.ds-err{background:#FF5A47;color:#131313}"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Visor da Câmera",
+    "overview": "A interface é o visor de uma câmera: um fundo escuro e neutro que não compete com a foto, e uma única cor viva, o Lime House, marcando onde está a ação. O voluntário olha para a tela no fim do culto, muitas vezes num auditório com pouca luz, e precisa achar o próximo passo de relance. Tudo que não é o próximo passo fica em grafite e cinza.\n\nA identidade vem da House de Criatividade: preto e lime, títulos condensados em caixa alta (Anton) e o símbolo de oito raios com a casa no centro. Do manual da marca vem também o canto de enquadramento, aqui usado como cantos lime no cartão do passo atual, como um visor que enquadra o que importa agora. Os componentes são macios e decididos: pílulas e cantos arredondados, um botão lime por tela e uma resposta tátil a cada clique.\n\nO sistema é escuro por decisão, não por moda: a foto é julgada sobre fundo neutro, como num editor, e o ambiente de uso é escuro. Não há tema claro.",
+    "keyCharacteristics": [
+      "Fundo preto da House com camadas de grafite; uma só cor de destaque.",
+      "Títulos em Anton, caixa alta; texto em Inter Tight.",
+      "Botões em pílula, cards de 20px, campos de 12px.",
+      "Ícones de traço fino (1,75), nunca emoji.",
+      "Movimento curto com desaceleração suave; nada elástico, nada brilhando."
+    ],
+    "rules": [
+      {
+        "name": "The One Lime Rule",
+        "body": "Cada tela tem no máximo um botão lime cheio: o próximo passo. Os demais são secundários, de contorno ou discretos.",
+        "section": "colors"
+      },
+      {
+        "name": "The Dark Ink Rule",
+        "body": "Texto sobre lime ou sobre vermelho cheio é sempre Preto House, nunca branco (branco sobre o vermelho dá 3,1:1).",
+        "section": "colors"
+      },
+      {
+        "name": "The Anton Only Shouts Rule",
+        "body": "Anton só em títulos e no botão grande; nunca em parágrafo, campo ou lista.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Glow Rule",
+        "body": "Nenhuma sombra ou halo colorido. Destaque vem de cor de fundo e contorno, não de brilho.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** usar um único botão Lime House por tela, para o próximo passo.",
+      "**Do** usar os ícones do conjunto `IC` do `app.js` (traço 1,75, cantos arredondados) e a bolinha de estado (`pt`) para status.",
+      "**Do** escrever texto sobre lime ou vermelho cheio em Preto House.",
+      "**Do** manter cards em 20px, campos em 12px e botões em pílula.",
+      "**Do** usar a desaceleração suave da casa (`cubic-bezier(.16,1,.3,1)`) para entradas e respostas."
+    ],
+    "donts": [
+      "**Don't** usar emoji como ícone ou enfeite.",
+      "**Don't** usar brilho ou halo colorido (sombra lime, glow).",
+      "**Don't** usar curva elástica ou de quique.",
+      "**Don't** colocar molduras ou cantos sobre a foto na seleção de fotos.",
+      "**Don't** criar tema claro sem decisão da equipe; o sistema é escuro por escolha.",
+      "**Don't** usar Anton em texto corrido."
+    ]
+  }
+}
