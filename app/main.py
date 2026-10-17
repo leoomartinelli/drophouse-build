@@ -438,6 +438,7 @@ def revisor_finalizar(d: dict = Body(...)):
     apagadas = erros = 0
     for i in idx:
         try:
+            editor.cancelar(lista[i])            # preset/edicao ainda na fila: nao revela uma foto que vai sumir
             if os.path.exists(lista[i]):
                 editor.apagar(lista[i])          # foto editada: apaga tambem a original guardada
                 os.remove(lista[i])
@@ -480,7 +481,7 @@ def editor_fotos():
     return {"fotos": editor.situacao(), "pendentes": editor.pendentes(), "disponivel": raw.disponivel(),
             "controles": {c: {"secao": v[0], "rotulo": v[1], "min": v[2], "max": v[3], "padrao": v[4], "passo": v[5]}
                           for c, v in editor.CONTROLES.items()},
-            "modos_wb": editor.MODOS_WB}
+            "modos_wb": editor.MODOS_WB, "perfis": editor.perfis()}
 
 
 @app.get("/api/editor/{i}")

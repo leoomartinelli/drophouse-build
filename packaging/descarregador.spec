@@ -11,6 +11,8 @@ NOME = "DescarregadorDeFotos"
 
 datas = [
     (os.path.join(RAIZ, "app", "static"), os.path.join("app", "static")),
+    (os.path.join(RAIZ, "app", "predefinicoes_prontas.json"), "app"),
+    (os.path.join(RAIZ, "app", "luts"), os.path.join("app", "luts")),
     (os.path.join(RAIZ, "VERSION"), "."),
 ]
 # conversor de RAW para JPEG (LightCraft): baixado antes por packaging/baixar_lightcraft.py
