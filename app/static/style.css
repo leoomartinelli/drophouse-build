@@ -54,10 +54,8 @@ p{margin:.5rem 0}
 .marca-id:hover .simbolo{transform:rotate(45deg)}
 .wordmark{font-size:1.5rem;line-height:1;letter-spacing:-.045em;font-weight:300}
 .wordmark b{font-weight:800}
-.frentes{font-family:var(--f-titulo);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--fraco);white-space:nowrap}
-.frentes i{font-style:normal;color:var(--bord2);margin:0 .5em}.frentes b{font-weight:400;color:var(--lima)}
 .assina{max-width:1064px;margin:28px auto 0;padding:18px 0 22px;display:flex;justify-content:space-between;gap:12px;color:var(--fraco);font-size:.8rem;letter-spacing:-.02em;border-top:1px solid var(--bord)}
-@media(max-width:620px){.frentes{display:none}.assina{flex-direction:column;gap:2px;margin:28px 18px 0}}
+@media(max-width:620px){.assina{flex-direction:column;gap:2px;margin:28px 18px 0}}
 
 /* ---------- estrutura ---------- */
 .wrap{max-width:1100px;margin:0 auto;padding:18px}
