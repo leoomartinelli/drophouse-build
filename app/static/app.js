@@ -45,7 +45,8 @@ const ic = (n, c = '') => `<svg class="ic ${c}" viewBox="0 0 24 24" fill="none" 
 // bolinha de estado (ok, aviso, procurando...) no lugar dos emojis de status
 const pt = c => `<i class="pt ${c || ''}"></i>`;
 async function api(url, opts = {}) {
-  const o = { method: opts.method || 'GET', headers: {} };
+  // X-DropHouse: o servidor so aceita pedidos que mudam algo com este cabecalho (barra pedidos vindos de outros sites)
+  const o = { method: opts.method || 'GET', headers: { 'X-DropHouse': '1' } };
   if (opts.body !== undefined) { o.body = JSON.stringify(opts.body); o.headers['Content-Type'] = 'application/json'; if (!opts.method) o.method = 'POST'; }
   const r = await fetch(url, o);
   let d = null; try { d = await r.json(); } catch (e) { }
@@ -137,7 +138,7 @@ function travar(btn, motivo, onde) {
 // A linha do erro ja existe vazia no HTML (campoErro) com altura reservada: mostrar o erro nao empurra nada.
 const campoErro = id => `<p class="erro-campo" id="${id}-erro" role="alert"></p>`;
 function erroCampo(input, msg) {
-  if (!input) return false;
+  if (!input || !input.id) return false;
   const caixa = input.closest('.tags') || input;
   let m = document.getElementById(input.id + '-erro');
   if (!m && msg) { m = document.createElement('p'); m.id = input.id + '-erro'; m.className = 'erro-campo'; m.setAttribute('role', 'alert'); (input.closest('.row') || caixa).insertAdjacentElement('afterend', m); }
@@ -165,8 +166,13 @@ function mascote(estado, tam = 72) {
 // troca o estado sem recriar o no (o poll so mexe na classe)
 function mascoteEstado(el, estado, umaVez) {
   if (!el) return;
+  if (el._fim) { el.removeEventListener('animationend', el._fim); el._fim = null; }   // troca no meio: so vale a ultima
   el.className = `mascote m-${estado}`;
-  if (umaVez) { void el.offsetWidth; el.addEventListener('animationend', function fim(e) { if (e.target.closest('.mascote') !== el) return; el.removeEventListener('animationend', fim); el.className = `mascote m-${umaVez}`; }); }
+  if (umaVez) {
+    void el.offsetWidth;
+    el._fim = e => { if (e.target.closest('.mascote') !== el) return; el.removeEventListener('animationend', el._fim); el._fim = null; el.className = `mascote m-${umaVez}`; };
+    el.addEventListener('animationend', el._fim);
+  }
 }
 // confete em CSS puro: 6 pedacinhos que somem do DOM em 1 s
 function confete(perto) {
@@ -250,7 +256,15 @@ async function carregar() { S.st = await api('/api/state'); const b = document.g
     document.getElementById('b-up').onclick = async () => { try { const r = await api('/api/update/aplicar', { body: {} }); toast(r.msg); b.classList.add('hidden'); } catch (e) { toast(e.message, true); } };
   } else b.classList.add('hidden'); }
 function ir(v) { if (v !== S.view) S.pilha.push(S.view); S.view = v; pararPoll(); render(); }
-function pararPoll() { if (S.poll) { clearInterval(S.poll); S.poll = null; } }
+// tela acesa enquanto copia (o computador nao dorme no meio). Todo poll que para (trocar de tela, Inicio, Voltar)
+// solta a tela e devolve o titulo da aba: nada fica preso em "42% · DropHouse" com a tela acesa para sempre.
+let travaTela = null;
+const acenderTela = async () => { try { if (!travaTela && navigator.wakeLock) { travaTela = await navigator.wakeLock.request('screen'); travaTela.addEventListener('release', () => { travaTela = null; }); } } catch (e) { } };
+const soltarTela = () => { if (travaTela) { travaTela.release().catch(() => { }); travaTela = null; } };
+const TITULO = document.title;
+// o navegador solta a tela sozinho quando a aba esconde; ao voltar, se ainda esta copiando, pede de novo
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.view === 'descarregar' && S.wiz && S.wiz.step === 4 && S.poll) acenderTela(); });
+function pararPoll() { if (S.poll) { clearInterval(S.poll); S.poll = null; } soltarTela(); document.title = TITULO; }
 function iniciarPoll(fn, ms) { pararPoll(); S.poll = setInterval(fn, ms); }
 async function render() {
   try { await carregar(); } catch (e) { $app.innerHTML = `<div class="wrap"><p class="bad">Servidor indisponível: ${esc(e.message)}</p></div>`; return; }
@@ -569,11 +583,6 @@ async function vHome() {
 
 // ---------- DESCARREGAMENTO (assistente passo a passo) ----------
 const PASSOS = ['Origem', 'Fotógrafo', 'Destino', 'Copiando', 'Finalizar'];
-// tela acesa enquanto copia (o computador nao dorme no meio); solta ao terminar ou sair da tela
-let travaTela = null;
-const acenderTela = async () => { try { if (!travaTela && navigator.wakeLock) travaTela = await navigator.wakeLock.request('screen'); } catch (e) { } };
-const soltarTela = () => { if (travaTela) { travaTela.release().catch(() => { }); travaTela = null; } };
-const TITULO = document.title;
 async function vDescarregar() {
   const st = S.st, sv = st.active_servir;
   S.entrou = true; S.avulso = !sv;
@@ -616,7 +625,8 @@ async function vDescarregar() {
   const nomeOk = () => { const n = nomeFot(); return n && !/[\\/:*?"<>|]/.test(n) && n !== '.' && n !== '..'; };
   const catAtual = () => sv ? S.sel.cat : 'Raiz (Nenhuma)';
   const subpasta = () => sv ? true : !!S.sel.sub;
-  const previaTexto = p => p && p.fotos ? `≈ ${fmtNum(p.fotos)} foto(s) · ${fmtBytes(p.bytes)}${p.tipos.length ? ' · ' + p.tipos.join(' + ') : ''}` : '';
+  // parcial: a contagem parou no teto (HD externo inteiro); o numero e o minimo
+  const previaTexto = p => p && p.fotos ? `≈ ${fmtNum(p.fotos)}${p.parcial ? '+' : ''} foto(s) · ${fmtBytes(p.bytes)}${p.parcial ? '+' : ''}${p.tipos.length ? ' · ' + p.tipos.join(' + ') : ''}` : '';
 
   // --- cabecalho + indicador de passos (passos ja feitos sao clicaveis para voltar, enquanto nao comecou a copiar) ---
   const editavel = W.step <= 3;
@@ -749,7 +759,7 @@ async function vDescarregar() {
       el.textContent = 'Contando as fotos…';
       tPrevia = setTimeout(async () => {
         const n = ++previaPedido;
-        try { const p = await api('/api/origem/previa', { body: { pastas: W.pastas } }); if (n !== previaPedido || !q('#o-previa')) return; W.previa = p; q('#o-previa').textContent = p.fotos ? previaTexto(p) : 'Nenhuma foto nestas pastas.'; } catch (e) { }
+        try { const p = await api('/api/origem/previa', { body: { pastas: W.pastas } }); if (!p || n !== previaPedido || !q('#o-previa')) return; W.previa = p; q('#o-previa').textContent = p.fotos ? previaTexto(p) : 'Nenhuma foto nestas pastas.'; } catch (e) { }
       }, 300);
     };
     const marcarProx = () => { W.pastas = [...document.querySelectorAll('#o-lista input:checked')].map(i => i.value); if (W.pastas.length) erroCampo(q('#o-lista'), ''); };
@@ -824,7 +834,6 @@ async function vDescarregar() {
   }
   // ---- passo 4 ----
   if (W.step === 4) {
-    acenderTela();
     const t0 = { t: Date.now(), b: tr.bytes_feitos || 0 };
     q('#b-cancelar').onclick = async () => {
       if (!await confirmar('Cancelar cópia', 'Parar a cópia agora?\n\nO que já foi copiado fica na pasta; o cartão não é alterado.', 'Cancelar cópia', 'Continuar copiando', true)) return;
@@ -853,6 +862,7 @@ async function vDescarregar() {
         else if (t.revisaveis === 0) alerta('Concluído', 'A cópia terminou, mas nenhuma imagem compatível com revisão foi transferida.');
       }
     }, 600);
+    acenderTela();          // depois do iniciarPoll: ele chama pararPoll, que solta a tela
   }
   // ---- passo 5 ----
   if (W.step === 5) {
@@ -1088,7 +1098,7 @@ async function abrirEditor(inicio = 0) {
           <button class="rd" id="e-rest" title="Desfaz tudo e volta a foto original guardada">${edIc('original')}<span>Restaurar original</span></button></div>
       </aside></div>
     <div class="ed-marcar hidden" id="e-marcar"></div><div class="strip" id="e-strip"></div>`;
-  document.body.appendChild(el);
+  document.body.appendChild(el); document.body.classList.add('tela-cheia');   // o logo do topo para atras do editor
   const $ = s => el.querySelector(s), img = $('#e-img'), stage = $('#e-stage'), selo = $('#e-selo');
   const zoom = criarZoom(stage, img, t => { $('#e-zt').textContent = t; });
   const aviso = t => { selo.textContent = t; selo.classList.toggle('hidden', !t); };
@@ -1542,7 +1552,7 @@ async function abrirEditor(inicio = 0) {
     const erros = fotos.filter(f => f.estado.startsWith('erro'));
     // solta tudo que prendia o editor na memoria (antes, cada vez que abria e fechava ficava um editor inteiro preso)
     document.removeEventListener('keydown', tecla); removeEventListener('resize', resCorte); removeEventListener('resize', resPrevia);
-    clearTimeout(tRes); zoom.destruir(); el.remove(); if (urlBlob) { URL.revokeObjectURL(urlBlob); urlBlob = null; }
+    clearTimeout(tRes); zoom.destruir(); el.remove(); document.body.classList.remove('tela-cheia'); if (urlBlob) { URL.revokeObjectURL(urlBlob); urlBlob = null; }
     if (erros.length) await alerta('Atenção', `${erros.length} foto(s) não puderam ser salvas e ficaram como estavam:\n${erros.map(f => f.nome).join(', ')}`);
     render();
   }
@@ -1601,7 +1611,7 @@ async function abrirRevisor() {
     <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)" aria-label="Sair da seleção">${ic('x')}</button></div>
     <div class="stage" id="r-stage"><img id="r-img" alt=""><div class="stamp hidden" id="r-stamp">DESCARTADA</div></div>
     <div class="strip" id="r-strip"></div><div class="kbd">← → navegar · Del/Backspace/X descartar · Ctrl+Z desfazer · Enter finalizar · Esc sair<br>Zoom: roda do mouse ou pinça · arrastar move · duplo clique ou 1 = 100% · + − · 0 = tela inteira</div>`;
-  document.body.appendChild(el);
+  document.body.appendChild(el); document.body.classList.add('tela-cheia');   // o logo do topo para atras da selecao
   const $ = s => el.querySelector(s); const img = $('#r-img');
   const zoom = criarZoom($('#r-stage'), img, t => { $('#r-zt').textContent = t; });
   $('#r-strip').innerHTML = lista.map((n, k) => `<img data-k="${k}" title="${esc(n)}" loading="lazy" src="/api/revisor/imagem/${k}?lado=160&v=${v}">`).join('');
@@ -1621,7 +1631,7 @@ async function abrirRevisor() {
   const prox = () => { if (i < lista.length - 1) { i++; mostra(); } }, ant = () => { if (i > 0) { i--; mostra(); } };
   function descartar() { if (!desc.has(i)) { desc.add(i); ordemDesc.push(i); } if (i < lista.length - 1) i++; mostra(); }
   function desfazer() { if (!ordemDesc.length) return; const k = ordemDesc.pop(); desc.delete(k); i = k; mostra(); toast(`Desfeito: a foto ${k + 1} volta a ser mantida`); }
-  async function fechar() { document.removeEventListener('keydown', tecla); zoom.destruir(); el.remove(); await render(); }
+  async function fechar() { document.removeEventListener('keydown', tecla); zoom.destruir(); el.remove(); document.body.classList.remove('tela-cheia'); await render(); }
   async function finalizar() {
     let msg = 'Revisão terminada! Nenhuma foto foi apagada.';
     if (desc.size) {
@@ -1630,7 +1640,7 @@ async function abrirRevisor() {
     try {
       const r = await api('/api/revisor/finalizar', { body: { descartar: [...desc] } });
       if (desc.size) msg = `Limpeza concluída! ${r.apagadas} foto(s) foram apagadas.` + (r.erros ? `\n(Erro ao apagar ${r.erros} foto(s).)` : '');
-      document.removeEventListener('keydown', tecla); zoom.destruir(); el.remove();
+      document.removeEventListener('keydown', tecla); zoom.destruir(); el.remove(); document.body.classList.remove('tela-cheia');
       await alerta(desc.size ? 'Sucesso' : 'Concluído', msg);
       api('/api/revisor/abrir-pasta', { body: {} }).catch(() => { });
       render();
@@ -1713,7 +1723,7 @@ async function vDrive() {
   <div class="grid"><div class="card"><h2>Pastas do Google Drive</h2>
    <input type="text" id="d-link" aria-label="Link ou ID da pasta do Drive" placeholder="Link ou ID da pasta">${campoErro('d-link')}
    <div class="row"><input type="text" id="d-nome" aria-label="Nome de exibição da pasta do Drive" placeholder="Nome de exibição (opcional)"><button class="fix" id="d-add">Adicionar</button></div>
-   ${cfg.pastas.map((p, i) => `<div class="item"><span class="t">${esc(p.nome)}<br><span class="mut mini">${esc(p.link)}</span></span><a href="https://drive.google.com/drive/folders/${encodeURIComponent(p.link.split('/folders/').pop().split('?')[0])}" target="_blank"><button class="pq cinza">Abrir</button></a><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div>
+   ${cfg.pastas.map((p, i) => `<div class="item"><span class="t">${esc(p.nome)}<br><span class="mut mini">${esc(p.link)}</span></span><a href="https://drive.google.com/drive/folders/${encodeURIComponent(p.link.split('/folders/').pop().split('?')[0])}" target="_blank" rel="noopener noreferrer"><button class="pq cinza">Abrir</button></a><button class="verm pq" data-rd="${i}">Remover</button></div>`).join('') || '<p class="mut mini">Nenhuma pasta.</p>'}</div>
   <div class="card"><h2>Pastas locais de destino</h2>
    <div class="row"><input type="text" id="l-cam" aria-label="Caminho da pasta local" placeholder="Caminho da pasta"><button class="fix cinza" id="l-proc">Procurar</button></div>${campoErro('l-cam')}
    <div class="row" style="margin-top:8px"><input type="text" id="l-nome" aria-label="Nome de exibição da pasta local" placeholder="Nome de exibição (opcional)"><button class="fix" id="l-add">Adicionar</button></div>
@@ -1924,9 +1934,12 @@ try { if (sessionStorage.getItem('voltarDescarregar')) { sessionStorage.removeIt
   // clique: pula de novo a cada clique, mesmo no meio de um pulo (tira a classe, forca o reflow e poe de volta)
   sim.addEventListener('click', () => { sim.classList.remove('pula'); void sim.getBoundingClientRect(); sim.classList.add('pula'); });
   sim.querySelector('.dh-caixa').addEventListener('animationend', e => { if (e.animationName === 'dh-pulinho') sim.classList.remove('pula'); });
+  let ret = null;                                  // posicao do logo, guardada: medir a cada quadro forca layout
+  const remede = () => { ret = null; };
+  addEventListener('resize', remede, { passive: true }); addEventListener('scroll', remede, { passive: true });
   const mira = () => {
     pedido = 0;
-    const r = sim.getBoundingClientRect();
+    const r = ret || (ret = sim.getBoundingClientRect());
     const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height * .68), d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 200);
     sim.style.setProperty('--ox', (dx / d * 5.2 * k).toFixed(2) + '%');
     sim.style.setProperty('--oy', (dy / d * 3.8 * k).toFixed(2) + '%');

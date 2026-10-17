@@ -19,7 +19,7 @@ falhas = []
 def req(metodo, rota, corpo=None, esperado=200):
     dados = json.dumps(corpo).encode() if corpo is not None else None
     r = urllib.request.Request(BASE + rota, data=dados, method=metodo,
-                               headers={"Content-Type": "application/json"} if dados else {})
+                               headers={"X-DropHouse": "1", **({"Content-Type": "application/json"} if dados else {})})
     try:
         with urllib.request.urlopen(r, timeout=10) as resp:
             codigo, texto = resp.status, resp.read()

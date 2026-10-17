@@ -104,6 +104,8 @@ border:1px solid #3C3C3C;border-radius:20px;box-shadow:0 22px 50px -16px rgba(0,
 <script>
 const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// numeros que vem de outras estacoes (rede local): sempre convertidos, nunca texto cru no HTML
+const num = v => Number(v) || 0;
 let D = null, chegou = 0, online = true;
 
 function dur(s) {
@@ -119,8 +121,8 @@ const FASE = { selecionando: 'descarregando', copiando: 'copiando as fotos', con
 
 function frase(a) {
   const quem = a.voluntario ? ` pelo voluntário <b>${esc(a.voluntario)}</b>` : '';
-  const prog = a.fase === 'copiando' && a.total ? ` (${a.feitos}/${a.total})` : '';
-  return `${nomePC(a)} ocupado${quem}, ${FASE[a.fase] || 'descarregando'}${prog} há <b class="tempo" data-s="${a.segundos}">${decorrido(a.segundos)}</b>`;
+  const prog = a.fase === 'copiando' && a.total ? ` (${num(a.feitos)}/${num(a.total)})` : '';
+  return `${nomePC(a)} ocupado${quem}, ${FASE[a.fase] || 'descarregando'}${prog} há <b class="tempo" data-s="${num(a.segundos)}">${decorrido(num(a.segundos))}</b>`;
 }
 
 function desenha() {
@@ -143,7 +145,7 @@ function desenha() {
   </div>
   ${(D.versoes_diferentes || []).length ? `<div class="card" style="border-color:var(--lar)"><b class="warn">PCs com versão diferente do líder (v${esc(D.versao_lider)}):</b> ${D.versoes_diferentes.map(esc).join(', ')}.<br><span class="mini mut">Instale a mesma versão em todos os PCs para que a numeração e as estatísticas fiquem certas.</span></div>` : ''}
   <div class="card"><h2>Descarregando agora</h2>
-   ${D.agora.map(a => `<div class="item ocup"><span class="t">${frase(a)}${a.fase === 'copiando' && a.total ? `<progress value="${a.feitos}" max="${a.total}"></progress>` : ''}</span></div>`).join('') || '<p class="vazio">Ninguém descarregando no momento.</p>'}
+   ${D.agora.map(a => `<div class="item ocup"><span class="t">${frase(a)}${a.fase === 'copiando' && a.total ? `<progress value="${num(a.feitos)}" max="${num(a.total)}"></progress>` : ''}</span></div>`).join('') || '<p class="vazio">Ninguém descarregando no momento.</p>'}
   </div>
   <div class="card"><h2>Faltam descarregar <span class="mut mini">(${D.faltam.length})</span></h2>
    <div class="chips">${D.faltam.map(f => `<span class="chip ${f.descarregando_agora ? 'agora' : ''}">${esc(f.voluntario)}${f.descarregando_agora ? ' <span class="warn mini">· descarregando agora</span>' : ''}</span>`).join('') || '<p class="vazio ok">Todos os voluntários já descarregaram.</p>'}</div>
@@ -152,7 +154,7 @@ function desenha() {
    ${D.estacoes.map(e => {
      const a = e.atividade || {}, st = !e.online ? 'offline' : e.sem_suporte ? '' : a.estado;
      const rot = { livre: 'Livre', ocupado: 'Ocupado', offline: 'Sem resposta' }[st] || 'Conectado';
-     const det = st === 'ocupado' ? `<br><span class="mini mut">${a.voluntario ? esc(a.voluntario) + ' · ' : ''}há <span class="tempo" data-s="${a.segundos}">${decorrido(a.segundos)}</span></span>`
+     const det = st === 'ocupado' ? `<br><span class="mini mut">${a.voluntario ? esc(a.voluntario) + ' · ' : ''}há <span class="tempo" data-s="${num(a.segundos)}">${decorrido(num(a.segundos))}</span></span>`
        : e.sem_suporte ? '<br><span class="mini mut">versão sem status (atualize esta estação)</span>' : '';
      return `<div class="item"><span class="t">${nomePC(e)} <span class="mini mut">${esc(e.ip || '')} · ${e.versao ? 'v' + esc(e.versao) : 'versão ?'}</span>${e.online && e.versao !== D.versao_lider ? ' <span class="mini warn">· versão diferente do líder</span>' : ''}${det}</span><span class="pill ${st}">${rot}</span></div>`;
    }).join('')}
@@ -174,7 +176,7 @@ function desenhaUploads() {
   if (!lista.length) { $up.classList.add('hidden'); document.body.style.paddingBottom = ''; return; }
   $up.classList.remove('hidden');
   const ativo = j => j.estado === 'fila' || j.estado === 'rodando';
-  const ativos = lista.filter(ativo), feitos = lista.reduce((a, j) => a + j.feitos, 0), total = lista.reduce((a, j) => a + j.total, 0);
+  const ativos = lista.filter(ativo), feitos = lista.reduce((a, j) => a + num(j.feitos), 0), total = lista.reduce((a, j) => a + num(j.total), 0);
   const ordem = lista.slice().reverse().sort((a, b) => ativo(b) - ativo(a));   // em andamento primeiro, depois os mais recentes
   // o cabecalho (com o mascote) e montado uma vez: a animacao nao recomeca a cada atualizacao
   if (!$up.firstChild) {
@@ -194,9 +196,9 @@ function desenhaUploads() {
   }
   $up.querySelector('#up-corpo').innerHTML = `
     ${upMin ? `<progress value="${total ? feitos / total : 0}" max="1"></progress>` : ordem.map(j => `<div class="upjob ${esc(j.estado)}">
-      <div class="uprow"><span><i class="pt ${esc(j.estado)}"></i><b>${esc(j.fotografo)}</b></span><span class="mini">${j.feitos}/${j.total}</span></div>
+      <div class="uprow"><span><i class="pt ${esc(j.estado)}"></i><b>${esc(j.fotografo)}</b></span><span class="mini">${num(j.feitos)}/${num(j.total)}</span></div>
       <div class="mini mut">${j.papel === 'lider' ? 'PC Líder' : 'PC Auxiliar'} (${esc(j.estacao)})</div>
-      <progress value="${j.progresso}" max="1"></progress>
+      <progress value="${num(j.progresso)}" max="1"></progress>
       ${j.estado === 'rodando' && (j.atuais || []).length ? `<div class="upfiles">${j.atuais.map(n => `<div title="${esc(n)}">${esc(n)}</div>`).join('')}</div>` : ''}
       <div class="mini mut">${esc(['concluido', 'erro', 'parado'].includes(j.estado) || j.parar ? j.msg : j.estado === 'fila' ? 'Na fila de envio...' : 'Enviando para ' + j.destino)}${j.erros ? ` · <span class="bad">${j.erros} com erro</span>` : ''}</div></div>`).join('')}`;
   // no celular o quadro fica embaixo: deixa espaco para rolar o painel ate o fim
@@ -222,9 +224,12 @@ setInterval(atualiza, 2000); atualiza();
   // clique: pula de novo a cada clique, mesmo no meio de um pulo (tira a classe, forca o reflow e poe de volta)
   sim.addEventListener('click', () => { sim.classList.remove('pula'); void sim.getBoundingClientRect(); sim.classList.add('pula'); });
   sim.querySelector('.dh-caixa').addEventListener('animationend', e => { if (e.animationName === 'dh-pulinho') sim.classList.remove('pula'); });
+  let ret = null;
+  const remede = () => { ret = null; };
+  addEventListener('resize', remede, { passive: true }); addEventListener('scroll', remede, { passive: true });
   const mira = () => {
     pedido = 0;
-    const r = sim.getBoundingClientRect();
+    const r = ret || (ret = sim.getBoundingClientRect());
     const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height * .68), d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 200);
     sim.style.setProperty('--ox', (dx / d * 5.2 * k).toFixed(2) + '%');
     sim.style.setProperty('--oy', (dy / d * 3.8 * k).toFixed(2) + '%');

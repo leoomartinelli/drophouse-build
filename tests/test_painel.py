@@ -17,7 +17,8 @@ from app.core import E  # noqa: E402
 from app.main import app  # noqa: E402
 
 # sem "with": o startup (rede UDP, monitor do cartao, git fetch) nao roda nos testes
-local = TestClient(app)
+# a tela manda o cabecalho X-DropHouse em todo pedido; os testes fazem o mesmo
+local = TestClient(app, headers={"X-DropHouse": "1"})
 celular = TestClient(app, client=("192.168.0.77", 40000))   # outro aparelho da rede local
 
 
@@ -304,8 +305,48 @@ def test_trocar_de_servir_zera_a_copia_concluida():
 
 def test_previa_conta_fotos_bytes_e_formatos():
     assert local.post("/api/origem", json={"path": cartao(5)}).status_code == 200
-    p = local.post("/api/origem/previa", json={"pastas": [".", "DCIM/100CANON"]}).json()
-    assert p == {"fotos": 5, "bytes": 20, "tipos": ["JPG"]}      # a pasta inteira nao conta duas vezes
+    for pastas in ([".", "DCIM/100CANON"], ["DCIM/100CANON", "."], ["DCIM", "DCIM/100CANON"]):
+        p = local.post("/api/origem/previa", json={"pastas": pastas}).json()
+        assert p == {"fotos": 5, "bytes": 20, "tipos": ["JPG"], "parcial": False}, pastas   # nada conta duas vezes
+
+
+def test_pastas_fora_do_cartao_sao_ignoradas():
+    """'../..' ou caminho absoluto nao saem da pasta de origem (nem na previa, nem no plano, nem na copia)."""
+    from app import transfer
+    pasta = cartao(3)
+    assert local.post("/api/origem", json={"path": pasta}).status_code == 200
+    fora = tempfile.mkdtemp(dir=TMP)
+    open(os.path.join(fora, "SEGREDO.JPG"), "wb").write(b"x")
+    rel = os.path.relpath(fora, pasta)
+    assert transfer._pastas_seguras([rel, fora, "../../..", "DCIM/100CANON"]) == [os.path.realpath(os.path.join(pasta, "DCIM", "100CANON"))]
+    assert local.post("/api/origem/previa", json={"pastas": [rel]}).json()["fotos"] == 0
+
+
+def test_previa_para_no_teto_e_quando_chega_pedido_novo():
+    from app import transfer
+    assert local.post("/api/origem", json={"path": cartao(50)}).status_code == 200
+    p = transfer.previa(["."], teto_itens=10)
+    assert p["parcial"] and p["fotos"] < 50
+    # um pedido mais novo encerra o anterior: simula a geracao mudando no meio da varredura
+    orig = transfer.os.scandir
+
+    def scandir_que_atropela(caminho):
+        transfer._previa_geracao += 1
+        return orig(caminho)
+    transfer.os.scandir = scandir_que_atropela
+    try:
+        assert transfer.previa(["."]) is None
+    finally:
+        transfer.os.scandir = orig
+
+
+def test_copia_com_pasta_inteira_e_subpasta_nao_duplica():
+    criar_servir()
+    pasta = cartao(4)
+    assert local.post("/api/origem", json={"path": pasta}).status_code == 200
+    r = local.post("/api/transferencia/plano", json={"fotografo": "Ana", "destino_base": E.destino_base,
+                                                     "pastas": [".", "DCIM/100CANON"], "categoria": "Louvor"})
+    assert r.json()["total_encontrados"] == 4
 
 
 def test_status_traz_resumo_e_bytes_da_copia():
@@ -392,3 +433,51 @@ def test_parar_envio_na_fila_nem_comeca():
         assert job["estado"] == "parado" and job["feitos"] == 0
     finally:
         E.uploads.remove(job)
+
+
+def test_pedido_de_outro_site_e_recusado():
+    """CSRF: um site aberto no navegador sai de 127.0.0.1 mas nao manda o cabecalho X-DropHouse."""
+    de_fora = TestClient(app)
+    for rota in ("/api/transferencia/cancelar", "/api/uploads/parar", "/api/encerrar", "/api/avulso"):
+        r = de_fora.post(rota, content="x", headers={"Content-Type": "text/plain", "Origin": "https://site-malicioso.example"})
+        assert r.status_code == 403, rota
+    assert de_fora.get("/api/state").status_code == 200          # leitura pela propria tela continua normal
+
+
+def test_host_de_fora_e_recusado():
+    """DNS rebinding: um dominio que passou a apontar para 127.0.0.1 nao fala com a API."""
+    assert local.get("/api/state", headers={"Host": "attacker.example:50007"}).status_code == 403
+    assert local.get("/api/state", headers={"Host": "localhost:50007"}).status_code == 200
+    assert local.get("/api/state", headers={"Host": "127.0.0.1:50007"}).status_code == 200
+
+
+def test_rotas_da_rede_local_continuam_abertas():
+    """O protocolo Lider/Auxiliar (outras maquinas) nao usa o cabecalho da tela."""
+    assert celular.get("/painel/dados").status_code == 200
+
+
+def test_cancelar_depois_da_ultima_foto_conta_como_concluida(monkeypatch):
+    """Pedido de cancelar que chega com tudo ja copiado nao apaga o registro: grava marcador e historico."""
+    import shutil
+    import threading
+    from app import transfer
+    pasta = cartao(4)
+    assert local.post("/api/origem", json={"path": pasta}).status_code == 200
+    original, vistos, trava = shutil.copy2, [0], threading.Lock()
+
+    def ultima_cancela(a, b):
+        with trava:
+            vistos[0] += 1
+            ultima = vistos[0] == 4
+        if ultima:
+            transfer.cancelar()
+        return original(a, b)
+    monkeypatch.setattr(shutil, "copy2", ultima_cancela)
+    r = local.post("/api/transferencia/iniciar", json={"fotografo": "Bia", "destino_base": E.destino_base, "pastas": ["."]})
+    assert r.status_code == 200, r.text
+    for _ in range(100):
+        if E.transfer["estado"] != "rodando":
+            break
+        time.sleep(0.05)
+    assert E.transfer["estado"] == "concluido", E.transfer
+    assert os.path.exists(os.path.join(pasta, "DCIM", "100CANON", core.MARKER_NAME))

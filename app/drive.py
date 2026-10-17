@@ -340,7 +340,7 @@ def parar_envio(job_id=None):
     comecaram sao puladas e as que ja estao subindo terminam. O que foi enviado continua marcado como enviado,
     entao mandar de novo depois sobe so o que faltou."""
     parados = 0
-    for j in E.uploads:
+    for j in list(E.uploads):              # copia: outra thread pode estar cortando a lista (so os 20 mais recentes)
         if j["estado"] in ("fila", "rodando") and (job_id is None or j["id"] == job_id):
             j["parar"] = True
             j["msg"] = "Parando..."

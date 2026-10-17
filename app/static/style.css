@@ -648,7 +648,7 @@ input.chip-edita{width:auto;min-width:80px;padding:2px 6px;border-radius:6px;fon
 .confete i:nth-child(even){background:var(--menta)}.confete i:nth-child(3n){background:var(--lar)}
 @keyframes m-confete{from{transform:rotate(var(--a)) translateY(0) scale(1);opacity:1}to{transform:rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(.6);opacity:0}}
 /* aba escondida: tudo parado; editor e selecao abertos: o logo nao pula atras deles */
-body.pausado .mascote *,body.pausado .simbolo *,body.pausado .wordmark,body:has(.rev) .simbolo *,body:has(.rev) .wordmark{animation-play-state:paused!important}
+body.pausado .mascote *,body.pausado .simbolo *,body.pausado .wordmark,body.tela-cheia .simbolo *,body.tela-cheia .wordmark{animation-play-state:paused!important}
 /* logo parado (3 ciclos sem ninguem mexer): nada anima, nem os olhos; o mouse e o clique continuam funcionando */
 .simbolo.quieto .dh-caixa,.simbolo.quieto .dh-olhos,.simbolo.quieto .dh-olho,.simbolo.quieto+.wordmark{animation:none}
 @media(prefers-reduced-motion:reduce){.mascote,.mascote *,.confete{animation:none!important}}

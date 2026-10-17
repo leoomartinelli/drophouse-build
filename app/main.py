@@ -54,16 +54,38 @@ def precisa_reiniciar():
     return _cache_reinicio["v"]
 
 
+# Quem pode falar com a tela: a requisicao vem da propria maquina, mas um site qualquer aberto no navegador tambem
+# sai de 127.0.0.1. Por isso, alem do IP:
+# - Host precisa ser localhost/127.0.0.1: um dominio que passa a apontar para 127.0.0.1 (DNS rebinding) e recusado;
+# - todo pedido que muda algo (nao-GET) precisa do cabecalho X-DropHouse, que a tela manda e um site de fora nao
+#   consegue mandar sem o navegador perguntar antes (e o servidor nao libera CORS). Isso barra o CSRF.
+HOSTS_LOCAIS = {"localhost", "127.0.0.1", "[::1]", "::1", "testserver"}
+CABECALHO_TELA = "x-drophouse"
+
+
+def _nome_host(request):
+    h = (request.headers.get("host") or "").strip().lower()
+    if h.startswith("["):                       # IPv6: [::1]:50007
+        return h.split("]")[0] + "]"
+    return h.rsplit(":", 1)[0]
+
+
 @app.middleware("http")
 async def restringir_acesso(request: Request, call_next):
-    if request.url.path not in ROTAS_LAN and os.environ.get("ALLOW_REMOTE_UI") != "1":
-        host = request.client.host if request.client else ""
-        try:
-            local = ipaddress.ip_address(host).is_loopback
-        except ValueError:
-            local = host in ("localhost", "testclient")
-        if not local:
-            return JSONResponse({"erro": "Acesso permitido apenas na própria máquina."}, status_code=403)
+    if request.url.path not in ROTAS_LAN:
+        remoto = os.environ.get("ALLOW_REMOTE_UI") == "1"
+        if not remoto:
+            host = request.client.host if request.client else ""
+            try:
+                local = ipaddress.ip_address(host).is_loopback
+            except ValueError:
+                local = host in ("localhost", "testclient")
+            if not local:
+                return JSONResponse({"erro": "Acesso permitido apenas na própria máquina."}, status_code=403)
+            if _nome_host(request) not in HOSTS_LOCAIS:
+                return JSONResponse({"erro": "Endereço não permitido."}, status_code=403)
+        if request.method not in ("GET", "HEAD", "OPTIONS") and request.headers.get(CABECALHO_TELA) != "1":
+            return JSONResponse({"erro": "Requisição recusada (sem o cabeçalho da tela do DropHouse)."}, status_code=403)
     return await call_next(request)
 
 
