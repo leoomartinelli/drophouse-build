@@ -11,11 +11,16 @@ from . import core
 _cache = OrderedDict()
 _lock = threading.Lock()
 _MAX_CACHE = 40
+_cache_mini = OrderedDict()       # miniaturas da tira (~5 KB cada): cabem muitas, sem tirar as grandes do cache
+_MAX_MINI = 800
+LADO_MINI = 400
 _cache_original = OrderedDict()   # fotos em tamanho cheio para o zoom: grandes, entao poucas na memoria
 _MAX_ORIGINAL = 3
 
 
-def _abrir(path):
+def _abrir(path, lado=None):
+    """lado: o tamanho que vai ser usado. JPEG ja e decodificado reduzido (draft: 1/2, 1/4 ou 1/8), o que deixa
+    as miniaturas e previas muito mais leves que abrir a foto inteira de 24 MP."""
     if path.lower().endswith(core.EXT_RAW):
         import rawpy
         with rawpy.imread(path) as raw:
@@ -23,14 +28,18 @@ def _abrir(path):
                 thumb = raw.extract_thumb()
                 if thumb.format == rawpy.ThumbFormat.JPEG:
                     img = Image.open(io.BytesIO(thumb.data))
+                    if lado:
+                        img.draft("RGB", (lado, lado))
                     img.load()
-                    if max(img.size) >= 1600:
+                    if max(img.size) >= min(1600, lado or 1600):
                         return ImageOps.exif_transpose(img)
             except Exception:
                 pass
             rgb = raw.postprocess(use_camera_wb=True, half_size=True, no_auto_bright=True)
             return Image.fromarray(rgb)
     img = Image.open(path)
+    if lado and img.format == "JPEG":
+        img.draft("RGB", (lado, lado))
     img = ImageOps.exif_transpose(img)
     img.load()
     return img
@@ -75,11 +84,12 @@ def original(path):
 def renderizar(path, lado):
     """Retorna bytes JPEG com o maior lado limitado a `lado`."""
     chave = (path, lado, os.path.getmtime(path))
+    cache, maximo = (_cache_mini, _MAX_MINI) if lado <= LADO_MINI else (_cache, _MAX_CACHE)
     with _lock:
-        if chave in _cache:
-            _cache.move_to_end(chave)
-            return _cache[chave]
-    img = _abrir(path)
+        if chave in cache:
+            cache.move_to_end(chave)
+            return cache[chave]
+    img = _abrir(path, lado)
     img.thumbnail((lado, lado))
     if img.mode not in ("RGB", "L"):
         img = img.convert("RGB")
@@ -87,7 +97,7 @@ def renderizar(path, lado):
     img.save(buf, "JPEG", quality=85 if lado > 400 else 75)
     dados = buf.getvalue()
     with _lock:
-        _cache[chave] = dados
-        while len(_cache) > _MAX_CACHE:
-            _cache.popitem(last=False)
+        cache[chave] = dados
+        while len(cache) > maximo:
+            cache.popitem(last=False)
     return dados

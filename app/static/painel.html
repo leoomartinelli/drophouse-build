@@ -33,6 +33,7 @@ h2 .mini{font-family:system-ui,sans-serif;text-transform:none}
 .tile{background:var(--card);border:1px solid var(--bord);border-radius:20px;padding:16px 18px}
 .tile b{display:block;font-family:Anton,'Arial Narrow',sans-serif;font-weight:400;font-size:2.1rem;line-height:1.05;color:var(--lima);font-variant-numeric:tabular-nums}
 .tile span{color:var(--mut);font-size:.8rem}
+.tile.zero b{color:var(--mut)} /* zero nao e destaque: lime so quando ha algo */
 .card{background:var(--card);border:1px solid var(--bord);border-radius:20px;padding:18px;margin-bottom:14px}
 .item{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border-radius:12px;
 background:var(--card2);border:1px solid var(--bord);margin:6px 0}
@@ -104,10 +105,10 @@ function desenha() {
   <div class="top"><div><h1>${esc(D.servir.nome)}</h1><div class="mut mini">Painel de acompanhamento · ${esc(dataBR(D.servir.data))}</div></div>
    <div class="mini mut" style="text-align:right"><span class="dot ${online ? '' : 'off'}"></span>${online ? 'ao vivo' : 'sem conexão'}<br>atualizado ${esc(D.atualizado)}</div></div>
   <div class="tiles">
-   <div class="tile"><b>${g.total_fotos}</b><span>fotos descarregadas</span></div>
-   <div class="tile"><b>${g.ja_descarregaram}/${g.voluntarios}</b><span>voluntários já descarregaram</span></div>
-   <div class="tile"><b>${g.pcs_ocupados}</b><span>PC(s) ocupado(s) agora</span></div>
-   <div class="tile"><b>${g.pcs_livres}/${g.pcs}</b><span>PC(s) livre(s)${g.pcs_offline ? ` · <span class="bad">${g.pcs_offline} sem resposta</span>` : ''}</span></div>
+   <div class="tile ${g.total_fotos ? '' : 'zero'}"><b>${g.total_fotos}</b><span>fotos descarregadas</span></div>
+   <div class="tile ${g.ja_descarregaram ? '' : 'zero'}"><b>${g.ja_descarregaram}/${g.voluntarios}</b><span>voluntários já descarregaram</span></div>
+   <div class="tile ${g.pcs_ocupados ? '' : 'zero'}"><b>${g.pcs_ocupados}</b><span>PC(s) ocupado(s) agora</span></div>
+   <div class="tile ${g.pcs_livres ? '' : 'zero'}"><b>${g.pcs_livres}/${g.pcs}</b><span>PC(s) livre(s)${g.pcs_offline ? ` · <span class="bad">${g.pcs_offline} sem resposta</span>` : ''}</span></div>
   </div>
   ${(D.versoes_diferentes || []).length ? `<div class="card" style="border-color:var(--lar)"><b class="warn">PCs com versão diferente do líder (v${esc(D.versao_lider)}):</b> ${D.versoes_diferentes.map(esc).join(', ')}.<br><span class="mini mut">Instale a mesma versão em todos os PCs para que a numeração e as estatísticas fiquem certas.</span></div>` : ''}
   <div class="card"><h2>Descarregando agora</h2>

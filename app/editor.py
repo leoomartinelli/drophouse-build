@@ -11,9 +11,11 @@ import hashlib
 import json
 import os
 import queue
+import shutil
 import subprocess
 import tempfile
 import threading
+from collections import OrderedDict
 
 from PIL import Image
 
@@ -48,6 +50,9 @@ MODOS_WB = {"asShot": "Como fotografado", "auto": "Automático", "daylight": "Lu
 
 _lock_render = threading.Semaphore(2)     # previas: no maximo duas ao mesmo tempo
 _lock_cache = threading.Lock()
+_previas = OrderedDict()                  # ultimas previas reveladas: desfazer, Antes/Depois e o mesmo preset de novo
+_MAX_PREVIAS = 16                         # voltam na hora, sem chamar o motor outra vez
+_segundo_plano = threading.local()        # marcado na thread que salva: o motor roda com prioridade baixa
 _como_fotografado = {}                    # original -> {"temp", "tint"}
 _fila = queue.Queue()
 SALVANDO = {}                             # caminho atual da foto -> "salvando" | "erro: ..."
@@ -230,8 +235,13 @@ def _cli():
 
 
 def _rodar(args, entrada=None):
-    r = subprocess.run([_cli(), *args], input=entrada, capture_output=True, text=True, timeout=TEMPO_MAXIMO,
-                       **core.SEM_JANELA)
+    cmd, extra = [_cli(), *args], dict(core.SEM_JANELA)
+    if getattr(_segundo_plano, "ativo", False):      # salvamento em segundo plano: cede o processador para a previa
+        if os.name == "nt":
+            extra["creationflags"] = extra.get("creationflags", 0) | subprocess.BELOW_NORMAL_PRIORITY_CLASS
+        elif shutil.which("nice"):
+            cmd = ["nice", "-n", "10", *cmd]
+    r = subprocess.run(cmd, input=entrada, capture_output=True, text=True, timeout=TEMPO_MAXIMO, **extra)
     if r.returncode != 0:
         raise RuntimeError((r.stderr or r.stdout or "").strip()[-300:] or f"lightcraft-cli: código {r.returncode}")
     return r.stdout
@@ -352,15 +362,28 @@ def previa(foto, aj, lado=1400):
     else:
         lado = max(200, min(int(lado), LADO_COPIA))
         origem = _copia_reduzida(original_de(foto))
+    chave = None
+    if lado:                                          # tamanho cheio (zoom) e grande demais para guardar na memoria
+        chave = (origem, os.path.getmtime(origem), lado, json.dumps(limpar(aj), sort_keys=True))
+        with _lock_cache:
+            if chave in _previas:
+                _previas.move_to_end(chave)
+                return _previas[chave]
     with _lock_render:
         fd, saida = tempfile.mkstemp(suffix=".jpg")
         os.close(fd)
         try:
             _render(origem, saida, aj, lado=lado, qualidade=85 if lado else 90)
             with open(saida, "rb") as f:
-                return f.read()
+                dados = f.read()
         finally:
             os.remove(saida)
+    if chave:
+        with _lock_cache:
+            _previas[chave] = dados
+            while len(_previas) > _MAX_PREVIAS:
+                _previas.popitem(last=False)
+    return dados
 
 
 # ---------- copiar/colar e predefinicoes ----------
@@ -580,6 +603,7 @@ def cancelar(foto):
 
 
 def _trabalhar():
+    _segundo_plano.ativo = True
     while True:
         try:
             foto = _fila.get(timeout=5)

@@ -254,6 +254,8 @@ def test_presets_prontos_vem_com_o_programa():
 
 def test_foto_apagada_sai_da_fila_do_preset(monkeypatch, tmp_path):
     reveladas = []
+    if editor._worker:                                # o worker de um teste anterior ainda espera a fila (ate 5 s):
+        editor._worker.join()                         # se ficasse vivo, disputaria as fotos com o _trabalhar daqui
     monkeypatch.setattr(editor, "salvar_agora", lambda foto, aj: reveladas.append(foto) or foto)
     fotos = [str(tmp_path / f"f{k}.jpg") for k in range(3)]
     for f in fotos:
