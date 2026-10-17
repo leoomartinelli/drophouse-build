@@ -1,21 +1,20 @@
 # Compila o Descarregador de Fotos para Windows, macOS (Apple Silicon e Intel) e Linux, testa cada programa
 # compilado (autoteste, rede Líder/Auxiliar, instalação e atualização automática) e publica a versão.
 #
-# - push na main: se mudou o programa, publica a versão seguinte (1.0.1, 1.0.2...; regras em
+# Só roda pelo botão "Run workflow" (Actions → Compilar), para não gastar os minutos de Actions da organização a
+# cada push ou pull request:
+# - rodando na main: se mudou o programa, publica a versão seguinte (1.0.1, 1.0.2...; regras em
 #   packaging/calcular_versao.py). Os PCs com o programa instalado se atualizam sozinhos.
-# - pull request: testa e compila com o número que a versão teria (programas em "Artifacts"), sem publicar.
+# - rodando em outra branch: testa e compila com o número que a versão teria (programas em "Artifacts"), sem publicar.
 name: Compilar
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
-# na main as execuções ficam em fila (cada uma publica uma versão); em pull request a nova cancela a anterior
+# execuções da mesma branch ficam em fila (na main cada uma publica uma versão)
 concurrency:
   group: compilar-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
