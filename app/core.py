@@ -384,6 +384,10 @@ def criar_estrutura_servir(servir):
 def ativar_servir(servir):
     E.active_servir = servir
     E.arquivos_transferidos = []
+    # trocar de Servir (ou ir para o avulso) comeca do zero: sem isso a tela de concluido voltava
+    # com "N arquivo(s) copiados" mas sem nenhuma foto para selecionar, editar ou enviar
+    if E.transfer.get("estado") != "rodando":
+        E.transfer = {"estado": "idle", "progresso": 0, "total": 0, "feitos": 0, "msg": ""}
     E.atividade = {"estado": "livre"}
     if servir:
         lp = servir.get("local_path")
@@ -441,6 +445,7 @@ def registrar_historico(fotografo, destino, descarregadas):
     hist.append({
         "data": hoje(), "hora": time.strftime("%H:%M:%S"), "fotografo": fotografo,
         "descarregadas": descarregadas, "selecionadas": descarregadas, "destino": destino,
+        "servir": (E.active_servir or {}).get("nome", ""),
     })
     gravar_json(PATH_HIST, hist)
     E.sessao_fotografo, E.sessao_destino = fotografo, destino

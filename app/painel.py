@@ -81,7 +81,7 @@ def atividade_local():
 
 
 _CAMPOS_UPLOAD = ("id", "fotografo", "total", "feitos", "progresso", "erros", "estado", "destino", "msg", "atuais",
-                  "servir_id")
+                  "servir_id", "parar")
 
 
 def uploads_locais():
