@@ -504,6 +504,8 @@ def test_link_das_fotos_vem_da_pasta_base():
                                  "link": "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp"}]
     pagina = celular.get("/painel").text
     assert "Link das fotos" in pagina and 'target="_blank"' in pagina and "noopener" in pagina
+    # botao "Copiar" ao lado do link, com plano B para o celular (painel em http: sem navigator.clipboard)
+    assert "data-copiar" in pagina and "execCommand('copy')" in pagina
 
 
 def test_trocar_o_link_da_pasta_base_atualiza_o_painel():

@@ -70,6 +70,12 @@ progress::-moz-progress-bar{background:var(--lima)}
 .link-fotos:hover,.link-fotos:focus-visible{border-color:var(--lima)}
 .link-fotos .t{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere}
 .link-fotos .seta{color:var(--lima);font-size:1.2rem;flex:none}
+.link-linha{display:flex;gap:8px;align-items:stretch;margin:6px 0}.link-linha .link-fotos{flex:1;min-width:0;margin:0}
+.copiar{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:96px;min-height:44px;padding:0 14px;
+ border-radius:14px;border:1px solid var(--bord);background:var(--card2);color:var(--txt);font:inherit;font-size:.9rem;font-weight:600;cursor:pointer}
+.copiar:hover,.copiar:focus-visible{border-color:var(--lima)}
+.copiar svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.copiar.ok{border-color:var(--lima);background:var(--lima-a);color:var(--lima)}
 .pt{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mut);margin-right:8px;vertical-align:middle}
 .pt.concluido{background:var(--lima)}.pt.erro{background:var(--lar)}.pt.rodando{background:var(--lima);animation:vivo 1.6s ease-in-out infinite}
 /* quadro de envios ao Drive: o mesmo da tela do PC, juntando todos os PCs */
@@ -112,6 +118,18 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 // numeros que vem de outras estacoes (rede local): sempre convertidos, nunca texto cru no HTML
 const num = v => Number(v) || 0;
 let D = null, chegou = 0, online = true;
+let copiado = { link: '', ate: 0 };   // "Copiado!" sobrevive ao redesenho do painel (a cada 2 s)
+const ICONE_COPIAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>';
+// no celular o painel abre por http (sem https): o navegador bloqueia navigator.clipboard e o plano B e o
+// textarea + execCommand('copy'), que ainda funciona nesse caso
+async function copiarTexto(texto) {
+  try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(texto); return true; } } catch (e) { }
+  const t = document.createElement('textarea');
+  t.value = texto; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(t); t.select(); t.setSelectionRange(0, texto.length);
+  let ok = false; try { ok = document.execCommand('copy'); } catch (e) { }
+  t.remove(); return ok;
+}
 
 function dur(s) {
   s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
@@ -149,7 +167,9 @@ function desenha() {
    <div class="tile ${g.pcs_livres ? '' : 'zero'}"><b>${g.pcs_livres}/${g.pcs}</b><span>PC(s) livre(s)${g.pcs_offline ? ` · <span class="bad">${g.pcs_offline} sem resposta</span>` : ''}</span></div>
   </div>
   <div class="card"><h2>Link das fotos</h2>
-   ${(D.links || []).map(l => `<a class="link-fotos" href="${esc(l.link)}" target="_blank" rel="noopener noreferrer"><span class="t"><b>${esc(l.nome)}</b><span class="mini mut">Abrir no Google Drive</span></span><span class="seta" aria-hidden="true">↗</span></a>`).join('') || '<p class="vazio">Nenhum link do Drive cadastrado.</p>'}
+   ${(D.links || []).map(l => { const ok = copiado.link === l.link && Date.now() < copiado.ate; return `<div class="link-linha">
+     <a class="link-fotos" href="${esc(l.link)}" target="_blank" rel="noopener noreferrer"><span class="t"><b>${esc(l.nome)}</b><span class="mini mut">Abrir no Google Drive</span></span><span class="seta" aria-hidden="true">↗</span></a>
+     <button type="button" class="copiar ${ok ? 'ok' : ''}" data-copiar="${esc(l.link)}" aria-label="Copiar o link de ${esc(l.nome)}">${ok ? '✓ Copiado!' : `${ICONE_COPIAR}Copiar`}</button></div>`; }).join('') || '<p class="vazio">Nenhum link do Drive cadastrado.</p>'}
   </div>
   ${(D.versoes_diferentes || []).length ? `<div class="card" style="border-color:var(--lar)"><b class="warn">PCs com versão diferente do líder (v${esc(D.versao_lider)}):</b> ${D.versoes_diferentes.map(esc).join(', ')}.<br><span class="mini mut">Instale a mesma versão em todos os PCs para que a numeração e as estatísticas fiquem certas.</span></div>` : ''}
   <div class="card"><h2>Descarregando agora</h2>
@@ -213,6 +233,12 @@ function desenhaUploads() {
   document.body.style.paddingBottom = innerWidth <= 620 ? ($up.offsetHeight + 16) + 'px' : '';
 }
 
+$app.addEventListener('click', async e => {
+  const b = e.target.closest('[data-copiar]'); if (!b) return;
+  const link = b.dataset.copiar;
+  if (await copiarTexto(link)) { copiado = { link, ate: Date.now() + 2000 }; desenha(); setTimeout(desenha, 2100); }
+  else prompt('Copie o link:', link);   // ultimo recurso: o navegador nao deixou copiar sozinho
+});
 async function atualiza() {
   try {
     const r = await fetch('/painel/dados', { cache: 'no-store' });
