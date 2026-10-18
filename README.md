@@ -1,17 +1,24 @@
-# Descarregador de Fotos — versão Web
+# DropHouse
 
-Versão web (servidor local + navegador) do Descarregador de Fotos do Ministério. O servidor Python roda no
-computador que recebe o cartão SD; a interface é aberta no navegador (`http://localhost:50007`).
+**DropHouse** é o descarregador de fotos da **House de Criatividade**: descarrega o cartão SD, seleciona, edita e
+envia as fotos do Servir ao Google Drive. O servidor Python roda no computador que recebe o cartão; a interface é
+aberta no navegador (`http://localhost:50007`).
+
+> Antes se chamava "Descarregador de Fotos". Alguns nomes técnicos continuam com o nome
+> antigo de propósito, para os PCs já instalados seguirem se atualizando sozinhos: a pasta de instalação, o nome do
+> executável (`DescarregadorDeFotos`), o pacote do Linux (`descarregador-de-fotos`), a pasta `Descarregador de
+> Fotos.app` no Mac e a pasta de dados `Descarregador de Fotos`. Tudo o que o voluntário vê (instalador, atalhos,
+> ícones, telas) já é DropHouse.
 
 ## Instalar (sem precisar de Python)
 Baixe na página de **[Releases](https://github.com/leoomartinelli/descarregar-foto-web/releases/latest)** o arquivo do seu sistema:
 
 | Sistema | Arquivo | Como instalar |
 |---|---|---|
-| Windows 10/11 | `…-windows-instalador.exe` | Abra e avance. O ícone aparece na Área de Trabalho e no Menu Iniciar. Na primeira instalação o Windows pede permissão de administrador uma vez, para liberar o Firewall para a rede local. |
-| Mac com chip Apple (M1, M2…) | `…-macos-apple-silicon.dmg` | Abra e arraste para **Aplicativos**. |
-| Mac com Intel | `…-macos-intel.dmg` | Igual ao de cima. |
-| Ubuntu, Mint, Debian | `…-linux-amd64.deb` | Dois cliques e **Instalar**. O ícone aparece no menu. Outras distribuições: `.tar.gz`, extraia e rode `criar-atalho.sh`. |
+| Windows 10/11 | `DropHouse-…-windows-instalador.exe` | Abra e avance. O ícone aparece na Área de Trabalho e no Menu Iniciar. Na primeira instalação o Windows pede permissão de administrador uma vez, para liberar o Firewall para a rede local. |
+| Mac com chip Apple (M1, M2…) | `DropHouse-…-macos-apple-silicon.dmg` | Abra e arraste para **Aplicativos**. |
+| Mac com Intel | `DropHouse-…-macos-intel.dmg` | Igual ao de cima. |
+| Ubuntu, Mint, Debian | `DropHouse-…-linux-amd64.deb` | Dois cliques e **Instalar**. O ícone aparece no menu. Outras distribuições: `.tar.gz`, extraia e rode `criar-atalho.sh`. |
 
 **Só precisa instalar uma vez: o programa se atualiza sozinho.** Ele procura versão nova a cada 20 minutos, baixa
 em segundo plano e instala quando o PC está livre (ninguém descarregando nem enviando ao Drive; no líder, nenhum PC
@@ -22,10 +29,10 @@ Depois é só clicar no ícone: o programa abre no navegador. Clicar de novo com
 vez. Para fechar, use **⏻ Encerrar** no Painel Inicial.
 
 - **Mac, na primeira vez:** o macOS avisa que não pode verificar o desenvolvedor. Abra *Ajustes do Sistema →
-  Privacidade e Segurança*, desça até o aviso do Descarregador de Fotos e clique em **Abrir Mesmo Assim**. Quando
+  Privacidade e Segurança*, desça até o aviso do DropHouse ("Descarregador de Fotos") e clique em **Abrir Mesmo Assim**. Quando
   ele pedir acesso à **rede local**, permita (sem isso o Líder/Auxiliar e o painel no celular não funcionam).
 - **Windows:** se aparecer "O Windows protegeu o computador", clique em *Mais informações → Executar assim mesmo*.
-- **Dados e fotos** ficam em `Descarregador de Fotos`, dentro da pasta do usuário (o mesmo nos três sistemas). O
+- **Dados e fotos** ficam em `Descarregador de Fotos` (nome antigo, de propósito), dentro da pasta do usuário (o mesmo nos três sistemas). O
   `.env` vai nessa pasta, e o log em `descarregador.log`. Atualizar ou reinstalar não apaga nada.
 - **Todos os PCs do Servir devem ter a mesma versão** (com a atualização automática isso acontece sozinho). O programa
   mostra a versão no Painel Inicial e o painel do celular aponta os PCs com versão diferente da do líder.

@@ -15,7 +15,7 @@ codesign --verify --deep --strict "$APP"
 STAGE="$(mktemp -d)"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Aplicativos"
-hdiutil create -volname "Descarregador de Fotos $VERSAO" -srcfolder "$STAGE" -ov -format UDZO \
-  "saida/DescarregadorDeFotos-$VERSAO-macos-$SUFIXO.dmg"
+hdiutil create -volname "DropHouse $VERSAO" -srcfolder "$STAGE" -ov -format UDZO \
+  "saida/DropHouse-$VERSAO-macos-$SUFIXO.dmg"
 rm -rf "$STAGE"
 ls -lh saida/

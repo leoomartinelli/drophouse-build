@@ -38,7 +38,7 @@ def log_em_arquivo():
         pass
     f = open(caminho, "a", encoding="utf-8", buffering=1)
     sys.stdout = sys.stderr = f
-    print(f"\n===== {time.strftime('%Y-%m-%d %H:%M:%S')} · Descarregador de Fotos v{VERSAO} =====")
+    print(f"\n===== {time.strftime('%Y-%m-%d %H:%M:%S')} · DropHouse v{VERSAO} =====")
 
 
 def ja_aberto(porta):
@@ -162,11 +162,11 @@ def main():
             webbrowser.open(f"http://localhost:{porta}")
         return
     if not EMPACOTADO:
-        for nome in ("HousinhoTitulo.txt", "HousinhoFoto.txt"):
+        for nome in ("DropHouseTitulo.txt",):
             p = os.path.join(RECURSOS, nome)
             if os.path.exists(p):
                 print(open(p, encoding="utf-8").read())
-    print(f"Descarregador de Fotos v{VERSAO} · http://localhost:{porta}")
+    print(f"DropHouse v{VERSAO} · House de Criatividade · http://localhost:{porta}")
     if os.environ.get("NO_BROWSER") != "1":
         threading.Thread(target=abrir_navegador_quando_pronto, args=(porta,), daemon=True).start()
 

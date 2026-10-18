@@ -1,4 +1,4 @@
-/* Descarregador de Fotos - versao Web (SPA sem build) */
+/* DropHouse (House de Criatividade) - interface web (SPA sem build) */
 const $app = document.getElementById('app');
 const $modal = document.getElementById('modal-root');
 const S = { view: 'home', st: null, editId: null, form: null, sel: {}, origem: null, poll: null };

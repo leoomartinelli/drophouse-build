@@ -1,4 +1,4 @@
-"""Servidor web do Descarregador de Fotos."""
+"""Servidor web do DropHouse (House de Criatividade)."""
 import ipaddress
 import os
 import shutil
@@ -14,7 +14,7 @@ from . import atualizador, core, drive, editor, lan, painel, raw, review, stats,
 from .core import E
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-app = FastAPI(title="Descarregador de Fotos - Web")
+app = FastAPI(title="DropHouse")
 
 # Endpoints publicos na rede local (protocolo Lider/Auxiliar). Todo o resto so aceita a propria maquina,
 # a menos que ALLOW_REMOTE_UI=1.
