@@ -1703,9 +1703,9 @@ async function abrirRevisor() {
   const el = document.createElement('div'); el.className = 'rev';
   el.innerHTML = `<div class="bar"><button class="cinza" id="r-ant">${ic('ant')}Anterior</button><div class="info" id="r-info"></div><button class="cinza" id="r-prox">Próxima${ic('prox')}</button>
     <span class="zgrupo"><button class="cinza" id="r-zm" title="Diminuir zoom (−)">−</button><button class="cinza" id="r-zt" title="Alternar entre tela inteira e 100% (duplo clique na foto)">Tela inteira</button><button class="cinza" id="r-zp" title="Aumentar zoom (+)">+</button></span>
-    <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)" aria-label="Sair da seleção">${ic('x')}</button></div>
+    <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-atalhos" title="Atalhos do teclado (?)" aria-label="Atalhos do teclado">${ic('teclado')}</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)" aria-label="Sair da seleção">${ic('x')}</button></div>
     <div class="stage" id="r-stage"><img id="r-img" alt=""><div class="stamp hidden" id="r-stamp">DESCARTADA</div></div>
-    <div class="strip" id="r-strip"></div><div class="kbd">← → navegar · Del/Backspace/X descartar · Ctrl+Z desfazer · Enter finalizar · Esc sair<br>Várias fotos: Shift + clique (ou Shift + ← →) seleciona o intervalo · Ctrl + clique soma ou tira · Ctrl+A todas · Esc limpa a seleção<br>Zoom: roda do mouse ou pinça · arrastar move · duplo clique ou 1 = 100% · + − · 0 = tela inteira</div>`;
+    <div class="strip" id="r-strip"></div>`;
   document.body.appendChild(el); document.body.classList.add('tela-cheia');   // o logo do topo para atras da selecao
   const $ = s => el.querySelector(s); const img = $('#r-img');
   const zoom = criarZoom($('#r-stage'), img, t => { $('#r-zt').textContent = t; });
@@ -1794,13 +1794,20 @@ async function abrirRevisor() {
     else if (ctrl && e.key.toLowerCase() === 'a') { e.preventDefault(); sel = Selecao.tudo(lista.length); ancora = 0; mostra(); }
     else if (e.key === 'Enter') finalizar();
     else if (e.key === 'Escape') { if (sel.size > 1) { sel = new Set([i]); ancora = i; mostra(); } else sair(); }
-    else if (e.key === '?') alerta('Atalhos da seleção', '← →  foto anterior / próxima\nDel, Backspace ou X  descartar (as selecionadas, se houver várias)\nShift + clique ou Shift + ← →  selecionar o intervalo\nCtrl + clique  somar ou tirar da seleção\nCtrl+A  selecionar todas\nCtrl+Z  desfazer\nEnter  finalizar\nEsc  limpar a seleção / sair\n+ −  zoom · 0 tela inteira · 1 ou duplo clique 100%');
+    else if (e.key === '?') atalhos();
     else if (e.key === '+' || e.key === '=') zoom.mais(); else if (e.key === '-' || e.key === '_') zoom.menos();
     else if (e.key === '0') zoom.ajustar(); else if (e.key === '1') zoom.cem();
   }
   document.addEventListener('keydown', tecla);
   $('#r-ant').onclick = () => ant(); $('#r-prox').onclick = () => prox(); $('#r-desc').onclick = descartar; $('#r-undo').onclick = desfazer;
-  $('#r-fim').onclick = finalizar; $('#r-sair').onclick = sair;
+  // atalhos numa janela (botao de teclado na barra de cima, ou tecla ?), como no editor
+  const atalhos = () => modal(`<h2>Atalhos da seleção</h2><table class="ed-atalhos">${[
+    ['← →', 'Foto anterior / próxima'], ['Del, Backspace ou X', 'Descartar (as selecionadas, se houver várias)'], ['Ctrl+Z', 'Desfazer'],
+    ['Shift + clique', 'Selecionar o intervalo (ou Shift + ← →)'], ['Ctrl + clique', 'Somar ou tirar da seleção'], ['Ctrl+A', 'Selecionar todas'],
+    ['Esc', 'Limpar a seleção (com uma foto só: sair)'], ['Enter', 'Finalizar a seleção'],
+    ['Roda do mouse, + −', 'Zoom (pinça na tela de toque)'], ['1 ou duplo clique', '100% (pixel real)'], ['0', 'Tela inteira'], ['Arrastar', 'Mover a foto com zoom']
+  ].map(([t, d]) => `<tr><td><kbd>${esc(t)}</kbd></td><td>${esc(d)}</td></tr>`).join('')}</table>`, [{ t: 'Fechar', v: true }]);
+  $('#r-fim').onclick = finalizar; $('#r-sair').onclick = sair; $('#r-atalhos').onclick = atalhos;
   $('#r-zm').onclick = zoom.menos; $('#r-zp').onclick = zoom.mais; $('#r-zt').onclick = zoom.alternar;
   mostra();
 }

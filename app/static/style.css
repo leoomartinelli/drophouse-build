@@ -323,7 +323,6 @@ input[type=checkbox]:checked:disabled{opacity:.45}
 .rev .stamp{position:absolute;z-index:2;top:30px;right:34px;background:var(--verm);color:var(--lima-ink);padding:6px 16px;border-radius:var(--pill);font-family:var(--f-titulo);font-weight:var(--p-titulo);font-size:1.1rem;letter-spacing:.08em;
  animation:carimbo .4s var(--sai)}
 @keyframes carimbo{from{opacity:0;transform:scale(1.25)}}
-.kbd{font-size:.78rem;color:var(--fraco);padding:6px 14px;background:var(--bg);text-align:center}
 
 /* ---------- editor de fotos ---------- */
 .ed .ed-corpo{flex:1;display:flex;min-height:0}
