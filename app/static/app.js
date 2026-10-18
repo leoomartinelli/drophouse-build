@@ -2108,6 +2108,16 @@ async function pararEnvio(id, quem) {
   if (!await confirmar(titulo, 'As fotos que já subiram ficam no Drive. Se mandar de novo depois, sobe só o que faltou.', 'Parar envio', 'Continuar enviando', true)) return;
   try { await api('/api/uploads/parar', { body: id === null ? {} : { id } }); upUlt = ''; uploadsAtualiza(); } catch (e) { toast(e.message, true); }
 }
+// o painel de envios fica por cima da tela: mede quanto ele cobre a barra do topo e empurra so isso (CSS --folga-up)
+function folgaUploads() {
+  const t = document.querySelector('.topbar');
+  let folga = 0;
+  if (t && !$up.classList.contains('hidden')) {
+    const b = t.getBoundingClientRect(), p = $up.getBoundingClientRect();
+    if (p.bottom > b.top && p.top < b.bottom && p.left < b.right && p.right > b.left) folga = Math.ceil(b.right - p.left + 12);
+  }
+  if (document.body.style.getPropertyValue('--folga-up') !== folga + 'px') document.body.style.setProperty('--folga-up', folga + 'px');
+}
 // arrastar pelo cabecalho (mouse ou toque); a posicao fica salva no navegador
 function upPosiciona(x, y) {
   const w = $up.offsetWidth, h = $up.offsetHeight;
@@ -2126,13 +2136,14 @@ $up.addEventListener('pointermove', e => { if (upDrag) upPosiciona(e.clientX - u
 const upSolta = () => {
   if (!upDrag) return; upDrag = null; $up.classList.remove('arrastando');
   try { const r = $up.getBoundingClientRect(); localStorage.setItem('uploadsPos', JSON.stringify({ x: r.left, y: r.top })); } catch (e) { }
+  folgaUploads();
 };
 $up.addEventListener('pointerup', upSolta); $up.addEventListener('pointercancel', upSolta);
-addEventListener('resize', () => { if ($up.style.left) { const r = $up.getBoundingClientRect(); upPosiciona(r.left, r.top); } });
+addEventListener('resize', () => { if ($up.style.left) { const r = $up.getBoundingClientRect(); upPosiciona(r.left, r.top); } folgaUploads(); });
 let upAtivosAntes = 0;
 async function uploadsAtualiza() {
   try {
-    const l = await api('/api/uploads'); uploadsDesenha(l);
+    const l = await api('/api/uploads'); uploadsDesenha(l); folgaUploads();   // a tela pode ter trocado (topo em outro lugar)
     const ativos = l.filter(j => j.estado === 'fila' || j.estado === 'rodando').length;
     if (ativos < upAtivosAntes) { const ult = l.filter(j => ['concluido', 'erro', 'parado'].includes(j.estado)).pop(); if (ult) toast(ult.estado === 'erro' ? `Envio de ${ult.fotografo} terminou com erros` : ult.estado === 'parado' ? `Envio de ${ult.fotografo} parado` : `Envio de ${ult.fotografo} concluído`, ult.estado === 'erro'); }
     upAtivosAntes = ativos;
