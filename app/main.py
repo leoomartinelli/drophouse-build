@@ -652,7 +652,8 @@ def upload_iniciar(d: dict = Body(default={})):
 
 @app.post("/api/upload/separado")
 def upload_separado(d: dict = Body(...)):
-    """"Enviar separado": {grupos: [{link, indices}]}, cada grupo de fotos para a pasta da sua categoria."""
+    """"Enviar separado": {grupos: [{link, indices}]}, cada grupo de fotos para a pasta da sua categoria.
+    Todas as fotos precisam ter categoria (nenhuma fica de fora)."""
     if editor.pendentes():
         erro(f"Aguarde: ainda salvando {editor.pendentes()} foto(s) editada(s). Tente de novo em instantes.")
     lista, vistos, grupos = list(E.arquivos_transferidos), set(), []
@@ -671,6 +672,8 @@ def upload_separado(d: dict = Body(...)):
         grupos.append((str(g.get("link") or ""), [lista[i] for i in indices]))
     if not grupos:
         erro("Escolha a categoria de pelo menos uma foto.")
+    if len(vistos) < len(lista):
+        erro(f"Todas as fotos precisam de uma categoria: faltam {len(lista) - len(vistos)}.")
     try:
         r = drive.iniciar_upload_separado(grupos, E.sessao_fotografo or "")
     except RuntimeError as e:

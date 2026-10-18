@@ -63,13 +63,13 @@ def test_cada_grupo_vai_para_a_pasta_da_sua_categoria(drive_falso):
     assert sorted(drive_falso) == sorted([("1CultoDasNoveXYZ", nomes(0, 1, 2)), ("2CultoDasOnzeABC", nomes(3, 4))])
 
 
-def test_fotos_sem_categoria_ficam_de_fora(drive_falso):
+def test_todas_as_fotos_precisam_de_categoria(drive_falso):
     criar_servir()
     descarregar("Ana", 4)
     r = local.post("/api/upload/separado", json={"grupos": [{"link": PASTA_X, "indices": [1, 2]}]})
-    assert r.status_code == 200 and r.json()["total"] == 2
-    esperar(drive_falso, 1)
-    assert drive_falso == [("1CultoDasNoveXYZ", nomes(1, 2))]
+    assert r.status_code == 400 and "faltam 2" in r.json()["detail"]
+    time.sleep(0.2)
+    assert drive_falso == []                                   # nada foi enviado
 
 
 def test_envio_normal_continua_igual(drive_falso):
@@ -86,7 +86,7 @@ def test_pasta_quebrada_nao_deixa_envio_pela_metade(drive_falso):
     descarregar("Ana", 3)
     antes = len(E.uploads)
     r = local.post("/api/upload/separado", json={"grupos": [{"link": PASTA_X, "indices": [0]},
-                                                            {"link": PASTA_X + "QUEBRADA", "indices": [1, 2]}]})
+                                                            {"link": PASTA_X + "QUEBRADA", "indices": [1, 2]}]})  # todas
     assert r.status_code == 400 and "acessar a pasta" in r.json()["detail"]
     time.sleep(0.2)
     assert drive_falso == [] and len(E.uploads) == antes      # nem o grupo da pasta boa foi enfileirado
@@ -97,7 +97,7 @@ def test_grupos_invalidos_sao_recusados(drive_falso):
     descarregar("Ana", 3)
     casos = [
         ({"grupos": [{"link": PASTA_X, "indices": [0, 1]}, {"link": PASTA_Y, "indices": [1, 2]}]}, "uma categoria"),
-        ({"grupos": [{"link": PASTA_X, "indices": [0, 9]}]}, "inexistente"),
+        ({"grupos": [{"link": PASTA_X, "indices": [0, 1, 2, 9]}]}, "inexistente"),
         ({"grupos": [{"link": PASTA_X, "indices": []}]}, "pelo menos uma foto"),
         ({"grupos": []}, "pelo menos uma foto"),
     ]

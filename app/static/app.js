@@ -1867,8 +1867,10 @@ async function abrirEnvioSeparado(destinos) {
       || '<p class="mut mini">Selecione as fotos de um culto ou ambiente, escolha a categoria e clique em Marcar.</p>'}
       ${sem ? `<div class="sp-linha sp-sem"><i></i><span>Sem categoria</span><b>${fmtNum(sem)}</b></div>` : ''}
       <p class="mut mini sp-dica">Shift + clique seleciona o intervalo · Ctrl + clique soma ou tira · Ctrl+A todas</p>`;
-    const total = n - sem;
-    $('#sp-enviar').disabled = !total; $('#sp-enviar').innerHTML = `${ic('enviar')}Enviar ${total ? fmtNum(total) + ' foto(s)' : ''}`;
+    // so envia com todas as fotos numa categoria (nenhuma fica de fora)
+    $('#sp-enviar').disabled = sem > 0;
+    $('#sp-enviar').innerHTML = sem ? `${ic('enviar')}Faltam ${fmtNum(sem)} sem categoria` : `${ic('enviar')}Enviar ${fmtNum(n)} foto(s)`;
+    $('#sp-enviar').title = sem ? 'Todas as fotos precisam de uma categoria antes de enviar' : 'Enviar cada grupo para a pasta da sua categoria';
   }
   $('#sp-grade').addEventListener('click', e => {
     const b = e.target.closest('.sp-foto'); if (!b) return;
@@ -1889,10 +1891,10 @@ async function abrirEnvioSeparado(destinos) {
   }
   async function enviar() {
     const sem = cat.filter(c => c === null).length;
+    if (sem) return toast(`Todas as fotos precisam de uma categoria: faltam ${fmtNum(sem)}.`, true);
     const grupos = destinos.map((d, k) => ({ link: d.l, nome: nomeCat(d), indices: cat.map((c, i) => c === k ? i : -1).filter(i => i >= 0) })).filter(g => g.indices.length);
-    if (!grupos.length) return toast('Marque a categoria de pelo menos uma foto.', true);
     const resumo = grupos.map(g => `${g.nome}: ${fmtNum(g.indices.length)} foto(s)`).join('\n');
-    if (!await confirmar('Enviar para o Drive', `${resumo}${sem ? `\n\n${fmtNum(sem)} foto(s) sem categoria ficam de fora deste envio.` : ''}\n\nCada grupo vai para a pasta da sua categoria.`, sem ? 'Enviar mesmo assim' : 'Enviar', 'Voltar')) return;
+    if (!await confirmar('Enviar para o Drive', `${resumo}\n\nCada grupo vai para a pasta da sua categoria.`, 'Enviar', 'Voltar')) return;
     const b = $('#sp-enviar'); b.disabled = true;
     try {
       const res = await api('/api/upload/separado', { body: { grupos: grupos.map(g => ({ link: g.link, indices: g.indices })) } });
