@@ -728,7 +728,9 @@ async function vDescarregar() {
       try {
         if (livre != null && W.previa && W.previa.bytes > livre &&
           !await confirmar('Pode faltar espaço', `As fotos ocupam cerca de ${fmtBytes(W.previa.bytes)}, mas o disco de destino tem ${fmtBytes(livre)} livres.\n\nA cópia pode parar no meio.`, 'Copiar mesmo assim', 'Cancelar', true)) return;
-        const plano = await api('/api/transferencia/plano', { body });
+        // ler a data de cada foto num cartao lento pode levar uns segundos: avisa se demorar
+        const aviso = setTimeout(() => toast('Lendo as datas das fotos do cartão…'), 700);
+        let plano; try { plano = await api('/api/transferencia/plano', { body }); } finally { clearTimeout(aviso); }
         if (plano.total_encontrados === 0) return alerta('Informação', 'Nenhuma imagem encontrada nas pastas selecionadas.');
         let modo = 'novas';
         if (plano.novas === 0 && plano.ja_descarregados > 0) {
@@ -737,6 +739,10 @@ async function vDescarregar() {
         } else if (plano.novas > 0 && plano.ja_descarregados > 0) {
           if (!await confirmar('Fotos já descarregadas', `${plano.ja_descarregados} foto(s) desta pasta já foram descarregadas antes.\n\nDescarregar só as ${plano.novas} novas?\n(Se escolher "Não", todas as ${plano.todas} serão copiadas.)`)) modo = 'todas';
         }
+        // cartao com fotos de mais de um dia (fotos pessoais antigas junto com as do culto): pergunta quais dias
+        const porDia = (modo === 'novas' ? plano.dias_novas : plano.dias_todas) || [];
+        let dias = [];
+        if (porDia.length > 1) { dias = await escolherDias(porDia); if (dias === null) return; }
         const temRaw = modo === 'novas' ? plano.tem_raw_novas : plano.tem_raw;
         let converter_raw = false;
         if (temRaw && plano.pode_converter_raw) {
@@ -745,7 +751,7 @@ async function vDescarregar() {
           if (r === null) return;
           converter_raw = r;
         } else if (temRaw && !await confirmar('Fotos em RAW', 'Há fotos em RAW (.cr3, .cr2, .nef, .arw) nas pastas selecionadas.\n\nElas serão copiadas no formato original. Continuar?')) return;
-        await api('/api/transferencia/iniciar', { body: { ...body, modo, converter_raw } });
+        await api('/api/transferencia/iniciar', { body: { ...body, modo, converter_raw, dias } });
         W.fotografo = nomeFot();
         ir_(4);
       } catch (e) { toast(e.message, true); }
@@ -919,6 +925,51 @@ async function vDescarregar() {
       setTimeout(() => { btn.disabled = false; }, 1500);
     };
   }
+}
+
+// cartao com fotos de dias diferentes: lista cada dia (miniatura, data e quantidade) e sugere so o mais recente.
+// Devolve os dias escolhidos ("AAAA-MM-DD"), [] para todas, ou null se cancelar.
+function escolherDias(lista) {
+  return new Promise(res => {
+    const hoje = new Date().toLocaleDateString('sv-SE'), recente = lista[lista.length - 1];
+    const dataBR = d => d.split('-').reverse().join('/');
+    const total = lista.reduce((a, d) => a + d.fotos, 0);
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal larga dias-modal"><h2>Fotos de datas diferentes</h2>
+      <p class="dias-intro">Encontramos fotos de datas diferentes neste cartão:</p>
+      <div class="dias-lista">${lista.map(d => `<label class="dia ${d === recente ? 'recente' : ''}">
+        <input type="checkbox" value="${esc(d.data)}" ${d === recente ? 'checked' : ''}>
+        <span class="dia-mini">${d.exemplo ? `<img src="/api/origem/miniatura?caminho=${encodeURIComponent(d.exemplo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
+        <span class="dia-txt"><b>${dataBR(d.data)}${d.data === hoje ? ' <span class="hoje">hoje</span>' : ''}</b><span class="mut">${fmtNum(d.fotos)} foto(s)</span></span></label>`).join('')}</div>
+      <button type="button" class="link-dias" id="dd-escolher">Escolher quais datas…</button>
+      <p class="dias-pergunta" id="dd-pergunta"></p><div class="btns" id="dd-btns"></div></div>`;
+    $modal.appendChild(bg);
+    const $ = s => bg.querySelector(s), caixa = $('.dias-modal');
+    const fim = v => { bg.remove(); res(v); };
+    const marcados = () => [...bg.querySelectorAll('.dia input:checked')].map(i => i.value);
+    function resumo() {
+      caixa.classList.remove('escolhendo');
+      $('#dd-pergunta').textContent = `Vamos descarregar só as mais recentes (${fmtNum(recente.fotos)} foto(s) de ${dataBR(recente.data)})?`;
+      $('#dd-btns').innerHTML = `<button class="cinza" id="dd-cancelar">Cancelar</button><button class="cinza" id="dd-todas">Descarregar todas (${fmtNum(total)})</button><button id="dd-recentes" data-foco>Só as mais recentes</button>`;
+      $('#dd-cancelar').onclick = () => fim(null); $('#dd-todas').onclick = () => fim([]); $('#dd-recentes').onclick = () => fim([recente.data]);
+      $('#dd-recentes').focus();
+    }
+    function escolher() {
+      caixa.classList.add('escolhendo');
+      const conta = () => {
+        const sel = marcados(), n = lista.filter(d => sel.includes(d.data)).reduce((a, d) => a + d.fotos, 0), b = $('#dd-ok');
+        b.disabled = !sel.length; b.textContent = sel.length ? `Descarregar ${fmtNum(n)} foto(s)` : 'Marque pelo menos um dia';
+      };
+      $('#dd-pergunta').textContent = 'Marque os dias que vão ser descarregados.';
+      $('#dd-btns').innerHTML = `<button class="cinza" id="dd-voltar">Voltar</button><button id="dd-ok"></button>`;
+      $('#dd-voltar').onclick = resumo; $('#dd-ok').onclick = () => { const sel = marcados(); fim(sel.length === lista.length ? [] : sel); };
+      bg.querySelectorAll('.dia input').forEach(i => i.onchange = conta); conta();
+      bg.querySelector('.dia input').focus();
+    }
+    $('#dd-escolher').onclick = escolher;
+    dialogo(bg, () => fim(null));
+    resumo();
+  });
 }
 
 // tela de loading do "preset em todas as fotos": cobre a tela inteira enquanto o lote salva (sem botao de fechar:

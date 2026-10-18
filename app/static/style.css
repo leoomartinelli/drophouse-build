@@ -669,4 +669,24 @@ body.pausado .mascote *,body.pausado .simbolo *,body.pausado .wordmark,body.tela
 .carregando progress{height:12px;margin-top:6px}
 .carregando .cp-num{font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums;margin:6px 0 0}
 .carregando .mini{margin:4px 0 0}
+/* cartao com fotos de dias diferentes: um dia por linha (miniatura, data, quantidade); o mais recente em destaque.
+   As caixas de marcar so aparecem em "Escolher quais datas" */
+.dias-modal{white-space:normal}
+.dias-modal .dias-intro{margin:0 0 10px}
+.dias-lista{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}
+.dia{display:flex;align-items:center;gap:12px;margin:0;padding:10px 12px;border:1px solid var(--bord);border-radius:var(--r);background:var(--card2);font-weight:400;cursor:default}
+.dia.recente{border-color:var(--lima);background:var(--lima-a)}
+.dia input{display:none}
+.dia-mini{width:64px;height:48px;flex:none;border-radius:8px;overflow:hidden;background:var(--bg2)}
+.dia-mini img{width:100%;height:100%;object-fit:cover;display:block}
+.dia-txt{display:flex;flex-direction:column;gap:2px}
+.dia-txt b{font-size:1.02rem}
+.dia .hoje{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--lima-ink);background:var(--lima);border-radius:var(--pill);padding:1px 7px;margin-left:4px;vertical-align:2px}
+.escolhendo .dia{cursor:pointer}.escolhendo .dia input{display:inline-grid}   /* o desenho da caixa (✓) usa grid */
+.escolhendo .dia.recente{border-color:var(--bord);background:var(--card2)}
+.escolhendo .dia:has(input:checked){border-color:var(--lima);background:var(--lima-a)}
+.link-dias{background:none;border:0;padding:6px 0;margin-top:8px;color:var(--lima);font-weight:600;text-decoration:underline;text-underline-offset:3px;border-radius:0}
+.link-dias:hover{background:none;color:var(--lima2)}
+.escolhendo .link-dias{display:none}
+.dias-modal .dias-pergunta{margin:14px 0 0;font-weight:600}
 
