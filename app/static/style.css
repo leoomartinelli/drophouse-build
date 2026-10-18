@@ -202,6 +202,11 @@ progress::-moz-progress-bar{background:var(--lima);border-radius:999px}
 .modal.larga{max-width:700px;white-space:normal}
 .modal h2{font-size:1.3rem;margin-bottom:.7rem}
 .modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
+/* 3 botoes (ex.: "Sair da selecao"): cabem numa linha; em tela estreita empilham na largura toda, a acao principal
+   (a ultima) em cima, em vez de sobrar um botao sozinho e torto na linha de baixo */
+.modal.tres{max-width:680px}
+.modal.tres .btns{flex-wrap:nowrap}
+@media(max-width:700px){.modal.tres .btns{flex-direction:column-reverse;align-items:stretch}.modal.tres .btns button{width:100%}}
 /* botao sem classe na janela = a resposta principal (OK, Sim): lime */
 .modal .btns button:not([class]){background:var(--lima);border-color:var(--lima);color:var(--lima-ink)}
 .modal .btns button:not([class]):hover{background:var(--lima2);border-color:var(--lima2)}

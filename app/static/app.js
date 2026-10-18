@@ -88,7 +88,8 @@ function dialogo(bg, cancelar) {
 function modal(html, botoes, larga) {
   return new Promise(res => {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
-    bg.innerHTML = `<div class="modal ${larga ? 'larga' : ''}"><div class="mc">${html}</div><div class="btns"></div></div>`;
+    // 3 botoes ou mais: janela mais larga para caberem numa linha (e empilhados em tela estreita; ver .modal.tres)
+    bg.innerHTML = `<div class="modal ${larga ? 'larga' : ''} ${botoes.length >= 3 ? 'tres' : ''}"><div class="mc">${html}</div><div class="btns"></div></div>`;
     const btns = bg.querySelector('.btns');
     // opcao segura: "continuar" (null), senao "nao" (false), senao a unica resposta; recebe o foco e e o que o Esc escolhe
     const seguro = botoes.find(b => b.v === null) || botoes.find(b => b.v === false) || botoes[botoes.length - 1];
