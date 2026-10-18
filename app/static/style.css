@@ -308,6 +308,12 @@ input[type=checkbox]:checked:disabled{opacity:.45}
 .rev .strip img:hover{opacity:.9}
 .rev .strip img.cur{border-color:var(--lima);opacity:1}
 .rev .strip img.desc{border-color:var(--verm);opacity:.22}
+/* varias selecionadas (Shift, Ctrl, Ctrl+A): contorno lime por fora; descartada continua com a borda vermelha */
+.rev .strip{user-select:none;-webkit-user-select:none}
+.rev .strip img.sel{opacity:1;outline:3px solid var(--lima);outline-offset:2px}
+.rev .strip img.sel.desc{opacity:.5}
+.rev .r-sel{display:inline-flex;align-items:center;gap:5px;color:var(--lima);font-weight:600;font-size:.85rem;white-space:nowrap}
+.rev .r-sel .ic{width:14px;height:14px}
 .rev .stage.desc img{opacity:.3;filter:grayscale(1)}
 .rev .stamp{position:absolute;z-index:2;top:30px;right:34px;background:var(--verm);color:var(--lima-ink);padding:6px 16px;border-radius:var(--pill);font-family:var(--f-titulo);font-weight:var(--p-titulo);font-size:1.1rem;letter-spacing:.08em;
  animation:carimbo .4s var(--sai)}
