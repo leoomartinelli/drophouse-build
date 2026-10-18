@@ -477,7 +477,15 @@ def nova_transferencia():
 
 @app.get("/api/revisor")
 def revisor_lista():
-    return {"arquivos": [os.path.basename(p) for p in E.arquivos_transferidos]}
+    # momentos: hora de cada foto (data do arquivo, que a copia preserva = hora da camera); o "Enviar separado"
+    # mostra a hora e marca as pausas longas, onde o voluntario trocou de culto ou ambiente
+    def momento(p):
+        try:
+            return int(os.path.getmtime(p))
+        except OSError:
+            return None
+    return {"arquivos": [os.path.basename(p) for p in E.arquivos_transferidos],
+            "momentos": [momento(p) for p in E.arquivos_transferidos]}
 
 
 @app.get("/api/revisor/imagem/{i}")
@@ -638,6 +646,39 @@ def upload_iniciar(d: dict = Body(default={})):
         erro(str(e))
     # o envio roda em segundo plano: o voluntario terminou e o PC ja fica livre para o proximo
     painel.liberar()
+    painel.limpar_cache()
+    return r
+
+
+@app.post("/api/upload/separado")
+def upload_separado(d: dict = Body(...)):
+    """"Enviar separado": {grupos: [{link, indices}]}, cada grupo de fotos para a pasta da sua categoria.
+    Todas as fotos precisam ter categoria (nenhuma fica de fora)."""
+    if editor.pendentes():
+        erro(f"Aguarde: ainda salvando {editor.pendentes()} foto(s) editada(s). Tente de novo em instantes.")
+    lista, vistos, grupos = list(E.arquivos_transferidos), set(), []
+    for g in d.get("grupos") or []:
+        try:
+            indices = sorted({int(i) for i in g.get("indices") or []})
+        except (TypeError, ValueError):
+            erro("Fotos inválidas.")
+        if not indices:
+            continue
+        if any(i < 0 or i >= len(lista) for i in indices):
+            erro("Foto inexistente: a lista de fotos mudou. Abra o \"Enviar separado\" de novo.")
+        if vistos & set(indices):
+            erro("Cada foto só pode ir para uma categoria.")
+        vistos.update(indices)
+        grupos.append((str(g.get("link") or ""), [lista[i] for i in indices]))
+    if not grupos:
+        erro("Escolha a categoria de pelo menos uma foto.")
+    if len(vistos) < len(lista):
+        erro(f"Todas as fotos precisam de uma categoria: faltam {len(lista) - len(vistos)}.")
+    try:
+        r = drive.iniciar_upload_separado(grupos, E.sessao_fotografo or "")
+    except RuntimeError as e:
+        erro(str(e))
+    painel.liberar()          # como no envio normal: o voluntario terminou e o PC ja fica livre para o proximo
     painel.limpar_cache()
     return r
 

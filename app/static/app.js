@@ -688,7 +688,8 @@ async function vDescarregar() {
     <div class="terciarios"><button class="cinza" id="b-novo">${ic('girar')}Novo descarregamento</button><button class="fantasma" id="b-abrir">${ic('pasta')}Abrir pasta</button></div>
     <section class="secao-drive"><h3>Enviar para o Google Drive (opcional)</h3>
     <select id="s-drive" aria-label="Pasta de destino no Google Drive">${optsDrive.map(o => `<option ${S.sel.drive === o.r ? 'selected' : ''}>${esc(o.r)}</option>`).join('')}</select>
-    <button class="lar largo" id="b-up">${ic('enviar')}Enviar ${st.transferidas ? fmtNum(st.transferidas) + ' foto(s)' : 'fotos'} para o Drive</button></section>`;
+    <div class="envio-botoes"><button class="lar" id="b-up">${ic('enviar')}Enviar ${st.transferidas ? fmtNum(st.transferidas) + ' foto(s)' : 'fotos'} para o Drive</button>
+      <button class="cinza" id="b-sep" title="Separar as fotos em categorias diferentes (ex.: um grupo por culto) e enviar cada grupo para a sua pasta">${ic('varias')}Enviar separado</button></div></section>`;
 
   $app.innerHTML = `<div class="wrap">
   <div class="topbar"><div><h1>${sv ? esc(sv.nome) : 'Modo avulso'}</h1>${sv ? '<div class="mut mini">Dia do Servir ativo</div>' : ''}</div>
@@ -883,7 +884,7 @@ async function vDescarregar() {
     const semFotos = st.transferidas ? '' : 'Nenhuma foto disponível nesta sessão. Faça um novo descarregamento.';
     // o motivo aparece uma vez (embaixo de "Selecionar fotos"); Editar e Enviar apontam para a mesma linha
     travar(q('#b-sel'), semFotos);
-    ['#b-edit', '#b-up'].forEach(s => { const b = q(s); if (!b || !semFotos) return; b.disabled = true; b.title = semFotos; b.setAttribute('aria-describedby', 'b-sel-motivo'); });
+    ['#b-edit', '#b-up', '#b-sep'].forEach(s => { const b = q(s); if (!b || !semFotos) return; b.disabled = true; b.title = semFotos; b.setAttribute('aria-describedby', 'b-sel-motivo'); });
     q('#b-sel').onclick = abrirRevisor;
     if (q('#b-edit')) q('#b-edit').onclick = () => abrirEditor();
     q('#b-abrir').onclick = () => api('/api/revisor/abrir-pasta', { body: {} }).catch(e => toast(e.message, true));
@@ -920,6 +921,7 @@ async function vDescarregar() {
         } catch (er) { toast(er.message, true); travarPreset(); }
       };
     }
+    q('#b-sep').onclick = () => abrirEnvioSeparado(optsDrive);
     q('#b-up').onclick = async ev => {
       const btn = ev.currentTarget; if (btn.disabled) return;
       btn.disabled = true;   // duplo clique nao envia duas vezes
@@ -1812,6 +1814,113 @@ async function abrirRevisor() {
   mostra();
 }
 
+// ---------- ENVIAR SEPARADO (uma categoria do Drive para cada grupo de fotos) ----------
+// O voluntario que fotografou varios cultos no mesmo dia separa as fotos: grade em ordem de horario (pausas longas
+// marcadas, onde ele trocou de ambiente), selecao como na tela de selecao (Shift, Ctrl, Ctrl+A; selecao.js),
+// categoria para as selecionadas (cor na miniatura; da para trocar depois) e um envio por categoria.
+const SEP_CORES = ['#70D068', '#5AA9FF', '#FFB020', '#FF6B9E', '#B28DFF', '#2ED3C6', '#FF8A3D', '#E6E15C'];
+const SEP_PAUSA = 20 * 60;      // 20 min sem fotos = provavel troca de culto/ambiente
+async function abrirEnvioSeparado(destinos) {
+  let r; try { r = await api('/api/revisor'); } catch (e) { return toast(e.message, true); }
+  if (!r.arquivos.length) return alerta('Aviso', 'Não há fotos para enviar.');
+  const v = Date.now(), n = r.arquivos.length, momentos = r.momentos || [];
+  // ordem de horario (a selecao com Shift segue essa ordem, nao o indice)
+  const ordem = [...Array(n).keys()].sort((a, b) => ((momentos[a] ?? 0) - (momentos[b] ?? 0)) || a - b);
+  const cat = new Array(n).fill(null);                  // indice da foto -> indice da categoria em `destinos`
+  let sel = new Set(), ancora = null;                   // posicoes na grade (ordem de horario)
+  const nomeCat = d => d.r.replace(/^Pasta do Servir: /, '');
+  const hora = t => t ? new Date(t * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+  const dur = s => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? `${h}h${m ? String(m).padStart(2, '0') : ''}` : `${m} min`; };
+  pararPoll();
+  const el = document.createElement('div'); el.className = 'rev sep';
+  el.innerHTML = `<div class="bar sep-bar">
+      <div class="info"><b>Enviar separado</b><br><span class="mini" id="sp-falta"></span></div>
+      <div class="sp-marcar"><select id="sp-cat" aria-label="Categoria de destino no Drive">${destinos.map((d, k) => `<option value="${k}">${esc(nomeCat(d))}</option>`).join('')}<option value="">Tirar a categoria</option></select>
+        <button class="lar" id="sp-aplicar" disabled>${ic('ok')}Marcar</button></div>
+      <button class="verde" id="sp-enviar" disabled>${ic('enviar')}Enviar</button>
+      <button class="cinza so-ic" id="sp-atalhos" title="Atalhos do teclado (?)" aria-label="Atalhos do teclado">${ic('teclado')}</button>
+      <button class="cinza so-ic" id="sp-sair" title="Sair (Esc)" aria-label="Sair do envio separado">${ic('x')}</button></div>
+    <div class="sp-corpo"><div class="sp-grade" id="sp-grade" role="listbox" aria-multiselectable="true" aria-label="Fotos em ordem de horário"></div>
+      <aside class="sp-resumo" id="sp-resumo" aria-live="polite"></aside></div>`;
+  document.body.appendChild(el); document.body.classList.add('tela-cheia');
+  const $ = s => el.querySelector(s);
+  // grade: miniatura + hora; uma divisoria nas pausas longas
+  $('#sp-grade').innerHTML = ordem.map((k, p) => {
+    const ant = p ? momentos[ordem[p - 1]] : null, t = momentos[k];
+    const pausa = ant && t && t - ant >= SEP_PAUSA ? `<div class="sp-pausa" role="separator">${ic('relogio')}Pausa de ${dur(t - ant)} · a partir das ${hora(t)}</div>` : '';
+    return `${pausa}<button type="button" class="sp-foto" role="option" aria-selected="false" data-p="${p}" title="${esc(r.arquivos[k])}">
+      <img src="/api/revisor/imagem/${k}?lado=200&v=${v}" alt="" loading="lazy" draggable="false"><span class="sp-hora">${hora(t)}</span><span class="sp-tag"></span></button>`;
+  }).join('');
+  function mostra() {
+    const sem = cat.filter(c => c === null).length;
+    $('#sp-falta').textContent = sem ? `${fmtNum(sem)} de ${fmtNum(n)} foto(s) sem categoria` : `Todas as ${fmtNum(n)} fotos têm categoria`;
+    el.querySelectorAll('.sp-foto').forEach(b => {
+      const p = +b.dataset.p, c = cat[ordem[p]], s = sel.has(p);
+      b.classList.toggle('sel', s); b.setAttribute('aria-selected', s ? 'true' : 'false');
+      b.classList.toggle('marcada', c !== null); b.style.setProperty('--c', c === null ? 'transparent' : SEP_CORES[c % SEP_CORES.length]);
+      b.querySelector('.sp-tag').textContent = c === null ? '' : nomeCat(destinos[c]);
+    });
+    $('#sp-aplicar').disabled = !sel.size;
+    $('#sp-aplicar').innerHTML = `${ic('ok')}${sel.size ? `Marcar ${fmtNum(sel.size)} foto(s)` : 'Selecione fotos'}`;
+    const grupos = destinos.map((d, k) => ({ d, k, fotos: cat.filter(c => c === k).length })).filter(g => g.fotos);
+    $('#sp-resumo').innerHTML = `<h3>Resumo</h3>${grupos.map(g => `<div class="sp-linha"><i style="--c:${SEP_CORES[g.k % SEP_CORES.length]}"></i><span>${esc(nomeCat(g.d))}</span><b>${fmtNum(g.fotos)}</b></div>`).join('')
+      || '<p class="mut mini">Selecione as fotos de um culto ou ambiente, escolha a categoria e clique em Marcar.</p>'}
+      ${sem ? `<div class="sp-linha sp-sem"><i></i><span>Sem categoria</span><b>${fmtNum(sem)}</b></div>` : ''}
+      <p class="mut mini sp-dica">Shift + clique seleciona o intervalo · Ctrl + clique soma ou tira · Ctrl+A todas</p>`;
+    // so envia com todas as fotos numa categoria (nenhuma fica de fora)
+    $('#sp-enviar').disabled = sem > 0;
+    $('#sp-enviar').innerHTML = sem ? `${ic('enviar')}Faltam ${fmtNum(sem)} sem categoria` : `${ic('enviar')}Enviar ${fmtNum(n)} foto(s)`;
+    $('#sp-enviar').title = sem ? 'Todas as fotos precisam de uma categoria antes de enviar' : 'Enviar cada grupo para a pasta da sua categoria';
+  }
+  $('#sp-grade').addEventListener('click', e => {
+    const b = e.target.closest('.sp-foto'); if (!b) return;
+    ({ sel, ancora } = Selecao.clique(sel, ancora, +b.dataset.p, { shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey }));
+    mostra();
+  });
+  function marcar() {
+    if (!sel.size) return;
+    const v_ = $('#sp-cat').value, c = v_ === '' ? null : +v_;
+    sel.forEach(p => { cat[ordem[p]] = c; });
+    toast(c === null ? `Categoria tirada de ${sel.size} foto(s)` : `${sel.size} foto(s) em "${nomeCat(destinos[c])}"`);
+    sel = new Set(); ancora = null; mostra();
+  }
+  function fechar() { document.removeEventListener('keydown', tecla); el.remove(); document.body.classList.remove('tela-cheia'); render(); }
+  async function sair() {
+    if (cat.some(c => c !== null) && !await confirmar('Sair do envio separado', 'Sair sem enviar? As categorias marcadas serão perdidas.', 'Sair sem enviar', 'Continuar separando', true)) return;
+    fechar();
+  }
+  async function enviar() {
+    const sem = cat.filter(c => c === null).length;
+    if (sem) return toast(`Todas as fotos precisam de uma categoria: faltam ${fmtNum(sem)}.`, true);
+    const grupos = destinos.map((d, k) => ({ link: d.l, nome: nomeCat(d), indices: cat.map((c, i) => c === k ? i : -1).filter(i => i >= 0) })).filter(g => g.indices.length);
+    const resumo = grupos.map(g => `${g.nome}: ${fmtNum(g.indices.length)} foto(s)`).join('\n');
+    if (!await confirmar('Enviar para o Drive', `${resumo}\n\nCada grupo vai para a pasta da sua categoria.`, 'Enviar', 'Voltar')) return;
+    const b = $('#sp-enviar'); b.disabled = true;
+    try {
+      const res = await api('/api/upload/separado', { body: { grupos: grupos.map(g => ({ link: g.link, indices: g.indices })) } });
+      toast(`${res.envios.length} envio(s) ao Drive iniciados em segundo plano${res.ignoradas ? ` (${res.ignoradas} foto(s) já enviadas foram puladas)` : ''}.`);
+      fechar(); uploadsAtualiza();
+    } catch (e) { b.disabled = false; alertaErro('Envio ao Drive', e.message); }
+  }
+  const atalhos = () => modal(`<h2>Atalhos do envio separado</h2><table class="ed-atalhos">${[
+    ['Clique', 'Selecionar uma foto'], ['Shift + clique', 'Selecionar o intervalo'], ['Ctrl + clique', 'Somar ou tirar da seleção'],
+    ['Ctrl+A', 'Selecionar todas'], ['Enter', 'Marcar as selecionadas com a categoria escolhida'], ['Esc', 'Limpar a seleção (sem seleção: sair)']
+  ].map(([t, d]) => `<tr><td><kbd>${esc(t)}</kbd></td><td>${esc(d)}</td></tr>`).join('')}</table>`, [{ t: 'Fechar', v: true }]);
+  function tecla(e) {
+    if (document.querySelector('.modal-bg')) return;
+    const alvo = e.target;
+    if (alvo && (alvo.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName))) return;
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (ctrl && e.key.toLowerCase() === 'a') { e.preventDefault(); sel = Selecao.tudo(n); ancora = 0; mostra(); }
+    else if (e.key === 'Enter' && sel.size) { e.preventDefault(); marcar(); }
+    else if (e.key === 'Escape') { if (sel.size) { sel = new Set(); ancora = null; mostra(); } else sair(); }
+    else if (e.key === '?') atalhos();
+  }
+  document.addEventListener('keydown', tecla);
+  $('#sp-aplicar').onclick = marcar; $('#sp-enviar').onclick = enviar; $('#sp-sair').onclick = sair; $('#sp-atalhos').onclick = atalhos;
+  mostra();
+}
+
 // ---------- HISTORICO ----------
 async function vHistorico() {
   const [h, dias] = await Promise.all([api('/api/historico'), api('/api/servir').catch(() => [])]);
@@ -2001,6 +2110,16 @@ async function pararEnvio(id, quem) {
   if (!await confirmar(titulo, 'As fotos que já subiram ficam no Drive. Se mandar de novo depois, sobe só o que faltou.', 'Parar envio', 'Continuar enviando', true)) return;
   try { await api('/api/uploads/parar', { body: id === null ? {} : { id } }); upUlt = ''; uploadsAtualiza(); } catch (e) { toast(e.message, true); }
 }
+// o painel de envios fica por cima da tela: mede quanto ele cobre a barra do topo e empurra so isso (CSS --folga-up)
+function folgaUploads() {
+  const t = document.querySelector('.topbar');
+  let folga = 0;
+  if (t && !$up.classList.contains('hidden')) {
+    const b = t.getBoundingClientRect(), p = $up.getBoundingClientRect();
+    if (p.bottom > b.top && p.top < b.bottom && p.left < b.right && p.right > b.left) folga = Math.ceil(b.right - p.left + 12);
+  }
+  if (document.body.style.getPropertyValue('--folga-up') !== folga + 'px') document.body.style.setProperty('--folga-up', folga + 'px');
+}
 // arrastar pelo cabecalho (mouse ou toque); a posicao fica salva no navegador
 function upPosiciona(x, y) {
   const w = $up.offsetWidth, h = $up.offsetHeight;
@@ -2019,13 +2138,14 @@ $up.addEventListener('pointermove', e => { if (upDrag) upPosiciona(e.clientX - u
 const upSolta = () => {
   if (!upDrag) return; upDrag = null; $up.classList.remove('arrastando');
   try { const r = $up.getBoundingClientRect(); localStorage.setItem('uploadsPos', JSON.stringify({ x: r.left, y: r.top })); } catch (e) { }
+  folgaUploads();
 };
 $up.addEventListener('pointerup', upSolta); $up.addEventListener('pointercancel', upSolta);
-addEventListener('resize', () => { if ($up.style.left) { const r = $up.getBoundingClientRect(); upPosiciona(r.left, r.top); } });
+addEventListener('resize', () => { if ($up.style.left) { const r = $up.getBoundingClientRect(); upPosiciona(r.left, r.top); } folgaUploads(); });
 let upAtivosAntes = 0;
 async function uploadsAtualiza() {
   try {
-    const l = await api('/api/uploads'); uploadsDesenha(l);
+    const l = await api('/api/uploads'); uploadsDesenha(l); folgaUploads();   // a tela pode ter trocado (topo em outro lugar)
     const ativos = l.filter(j => j.estado === 'fila' || j.estado === 'rodando').length;
     if (ativos < upAtivosAntes) { const ult = l.filter(j => ['concluido', 'erro', 'parado'].includes(j.estado)).pop(); if (ult) toast(ult.estado === 'erro' ? `Envio de ${ult.fotografo} terminou com erros` : ult.estado === 'parado' ? `Envio de ${ult.fotografo} parado` : `Envio de ${ult.fotografo} concluído`, ult.estado === 'erro'); }
     upAtivosAntes = ativos;
