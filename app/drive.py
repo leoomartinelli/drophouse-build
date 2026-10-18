@@ -271,10 +271,8 @@ def gravar_voluntarios(servir, info=None):
     return erros
 
 
-def iniciar_upload(link_pasta, fotografo=""):
-    """Enfileira o envio das fotos atuais. Retorna na hora; o envio roda em segundo plano,
-    um job por vez (cada job usa 2 conexoes paralelas, como no app original)."""
-    global _contador, _worker_ativo
+def _preparar_envio():
+    """Confere o que todo envio precisa (bibliotecas, credenciais e login) e devolve as credenciais."""
     if not DISPONIVEL:
         raise RuntimeError("Bibliotecas da API do Google não estão instaladas.")
     if not E.arquivos_transferidos:
@@ -284,7 +282,11 @@ def iniciar_upload(link_pasta, fotografo=""):
     creds = _credenciais()
     if not creds:
         raise RuntimeError("Você não está logado no Google. Faça o login na tela 'Conta Google'.")
+    return creds
 
+
+def _destino(creds, link_pasta):
+    """(id da pasta, nome para a tela). Link vazio ou que nao e pasta: raiz do Drive."""
     folder_id = extrair_id_pasta(link_pasta)
     destino_nome = "a raiz do Google Drive"
     if folder_id != 'root':
@@ -298,9 +300,14 @@ def iniciar_upload(link_pasta, fotografo=""):
             folder_id = 'root'
         else:
             destino_nome = f"a pasta '{meta.get('name')}'"
+    return folder_id, destino_nome
 
+
+def _enfileirar(creds, folder_id, destino_nome, todos, fotografo):
+    """Cria o job de envio das fotos `todos` para a pasta (pulando as que ja estao subindo ou ja foram para ela).
+    Devolve (job, ignoradas); levanta RuntimeError se nao sobrar nada para enviar."""
+    global _contador, _worker_ativo
     raiz = core.raiz_servir(E.active_servir) if E.active_servir else None
-    todos = list(E.arquivos_transferidos)  # copia: o proximo fotografo pode trocar a lista global
     ja_enviados = core.carregar_enviados_destino(raiz) if raiz else {}
     with _lock_fila:
         arquivos, subindo, ja_foram = [], 0, 0
@@ -326,13 +333,52 @@ def iniciar_upload(link_pasta, fotografo=""):
         if not _worker_ativo:
             _worker_ativo = True
             threading.Thread(target=_worker, daemon=True).start()
+    return job, subindo + ja_foram
+
+
+def _marcar_tempo_ate_envio():
     atual, E.descarregamento_atual = E.descarregamento_atual, None
     if atual:
         try:
             core.marcar_envio_drive(atual)   # tempo desde o fim da copia ate o clique em enviar
         except Exception as e:
             print(f"Erro ao registrar tempo ate o envio ao Drive: {e}")
-    return {"id": job["id"], "total": job["total"], "ignoradas": subindo + ja_foram}
+
+
+def iniciar_upload(link_pasta, fotografo=""):
+    """Enfileira o envio das fotos atuais. Retorna na hora; o envio roda em segundo plano,
+    um job por vez (cada job usa 2 conexoes paralelas, como no app original)."""
+    creds = _preparar_envio()
+    folder_id, destino_nome = _destino(creds, link_pasta)
+    todos = list(E.arquivos_transferidos)  # copia: o proximo fotografo pode trocar a lista global
+    job, ignoradas = _enfileirar(creds, folder_id, destino_nome, todos, fotografo)
+    _marcar_tempo_ate_envio()
+    return {"id": job["id"], "total": job["total"], "ignoradas": ignoradas}
+
+
+def iniciar_upload_separado(grupos, fotografo=""):
+    """"Enviar separado": cada grupo [(link da pasta, [fotos])] vira um envio para a sua pasta (categoria).
+    Todas as pastas sao conferidas antes de enfileirar qualquer grupo: uma pasta errada nao deixa envio pela metade.
+    Grupo cujas fotos ja foram (ou estao indo) para aquela pasta e pulado e contado em "ignoradas"."""
+    creds = _preparar_envio()
+    destinos = {}
+    for link, _ in grupos:
+        if link not in destinos:
+            destinos[link] = _destino(creds, link)
+    envios, ignoradas = [], 0
+    for link, fotos in grupos:
+        folder_id, destino_nome = destinos[link]
+        try:
+            job, ign = _enfileirar(creds, folder_id, destino_nome, list(fotos), fotografo)
+        except RuntimeError:
+            ignoradas += len(fotos)              # este grupo inteiro ja foi (ou esta indo) para esta pasta
+            continue
+        envios.append({"id": job["id"], "total": job["total"], "destino": destino_nome})
+        ignoradas += ign
+    if not envios:
+        raise RuntimeError("Estas fotos já foram enviadas (ou estão sendo enviadas) para as pastas escolhidas.")
+    _marcar_tempo_ate_envio()
+    return {"envios": envios, "total": sum(e["total"] for e in envios), "ignoradas": ignoradas}
 
 
 def parar_envio(job_id=None):
