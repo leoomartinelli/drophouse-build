@@ -585,11 +585,18 @@ async function vHome() {
 // ---------- DESCARREGAMENTO (assistente passo a passo) ----------
 const PASSOS = ['Origem', 'Fotógrafo', 'Destino', 'Copiando', 'Finalizar'];
 async function vDescarregar() {
-  const st = S.st, sv = st.active_servir;
+  let st = S.st;
+  const sv = st.active_servir;
   S.entrou = true; S.avulso = !sv;
   const W = S.wiz || (S.wiz = { step: 1, pastas: [] });
   const tr = await api('/api/transferencia/status');
-  if (tr.estado === 'rodando') W.step = 4;
+  // uma copia curta (poucas fotos) termina antes desta tela: o status ja diz "concluido", mas S.st ainda e de antes
+  // da copia (0 fotos) e a tela voltava para o passo 2 (ou saia com "Nenhuma foto disponivel"). Busca o estado de novo.
+  if (tr.estado === 'concluido' && !st.transferidas && tr.revisaveis > 0) { await carregar(); st = S.st; }
+  // logo depois de iniciar, passa sempre pelo passo "Copiando", mesmo que a copia (curta) ja tenha terminado: e ele
+  // que comemora e pergunta "Abrir a seleção agora?" (ou mostra o erro / o cancelamento)
+  const acabouDeIniciar = W.recemIniciado; W.recemIniciado = false;
+  if (tr.estado === 'rodando' || (acabouDeIniciar && ['concluido', 'erro', 'cancelado'].includes(tr.estado))) W.step = 4;
   else if (tr.estado === 'concluido' && st.transferidas > 0) W.step = 5;
   else if (W.step >= 4) W.step = sv ? 2 : 3;
   if (sv && W.step === 3) W.step = 2;
@@ -752,7 +759,7 @@ async function vDescarregar() {
           converter_raw = r;
         } else if (temRaw && !await confirmar('Fotos em RAW', 'Há fotos em RAW (.cr3, .cr2, .nef, .arw) nas pastas selecionadas.\n\nElas serão copiadas no formato original. Continuar?')) return;
         await api('/api/transferencia/iniciar', { body: { ...body, modo, converter_raw, dias } });
-        W.fotografo = nomeFot();
+        W.fotografo = nomeFot(); W.recemIniciado = true;
         ir_(4);
       } catch (e) { toast(e.message, true); }
   }
