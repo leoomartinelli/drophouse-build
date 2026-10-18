@@ -7,6 +7,7 @@ import concurrent.futures
 import ipaddress
 import os
 import platform
+import re
 import socket
 import threading
 import time
@@ -14,7 +15,7 @@ import time
 import psutil
 import requests
 
-from . import core
+from . import core, drive
 from .core import E
 from .versao import VERSAO
 
@@ -175,6 +176,24 @@ def _consultar_auxiliar(ip, info):
     return est
 
 
+ID_PASTA_DRIVE = re.compile(r"[A-Za-z0-9_-]{10,}")
+
+
+def links_das_fotos(servir):
+    """Pastas base do Drive do Servir (as que o lider informou; as de categoria criadas sozinhas ficam de fora).
+    O link e remontado a partir do ID da pasta: o painel abre no celular de qualquer um na rede e nunca deve
+    mostrar outra coisa que nao uma pasta do Drive (texto digitado errado ou "javascript:" viram "sem link")."""
+    saida, vistos = [], set()
+    for p in servir.get("drive_folders", []):
+        fid = drive.extrair_id_pasta(p.get("link"))
+        if p.get("auto") or not ID_PASTA_DRIVE.fullmatch(fid) or fid in vistos:
+            continue
+        vistos.add(fid)
+        saida.append({"nome": p.get("nome") or "Pasta do Google Drive",
+                      "link": f"https://drive.google.com/drive/folders/{fid}"})
+    return saida
+
+
 def _montar():
     servir = E.active_servir
     if E.network_mode != "lider":
@@ -228,6 +247,7 @@ def _montar():
     return {
         "modo": "lider",
         "servir": {"id": servir.get("id"), "nome": servir.get("nome"), "data": servir.get("data_criacao")},
+        "links": links_das_fotos(servir),         # area "Link das fotos": abre a pasta do Drive numa nova aba
         "estacoes": [{k: e.get(k) for k in ("nome", "ip", "papel", "online", "atividade", "sem_suporte", "versao")}
                      for e in estacoes],
         # PCs com versao diferente da do lider (ou que nao informam a versao): podem nao se entender direito
