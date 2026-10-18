@@ -42,7 +42,7 @@ def _jpeg_valido(caminho):
         return False
 
 
-def converter(raw, destino):
+def converter(raw, destino, marca=None):
     """Converte a copia `raw` (dentro de `destino`) em JPEG na resolucao total e apaga o RAW.
 
     Retorna o caminho do JPEG. Se algo falhar, o RAW fica onde esta e a excecao sobe."""
@@ -70,6 +70,8 @@ def converter(raw, destino):
             raise RuntimeError((r.stderr or r.stdout or "").strip()[-400:] or f"codigo {r.returncode}")
         st = os.stat(raw)
         os.utime(parcial, (st.st_atime, st.st_mtime))   # a numeracao e o revisor ordenam pela data
+        from . import metadados
+        metadados.marcar(parcial, marca)                 # o JPEG convertido tambem leva a marca do DropHouse
         os.replace(parcial, jpg)
     except BaseException:
         try:
@@ -81,14 +83,14 @@ def converter(raw, destino):
     return jpg
 
 
-def converter_todos(raws, destino, ao_avancar=None):
+def converter_todos(raws, destino, ao_avancar=None, marca=None):
     """Converte um por vez (cada conversao usa ~1,3 GB de RAM e todos os nucleos).
 
     Retorna ({raw: jpg} dos convertidos, [raws que falharam])."""
     feitos, falhas = {}, []
     for i, raw in enumerate(raws):
         try:
-            feitos[raw] = converter(raw, destino)
+            feitos[raw] = converter(raw, destino, marca)
         except Exception as e:
             print(f"Erro ao converter {os.path.basename(raw)}: {e}")
             falhas.append(raw)

@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 from PIL import Image
 
-from . import core, raw
+from . import core, metadados, raw
 from .core import E
 
 PASTA_ORIGINAIS = ".originais"
@@ -520,6 +520,7 @@ def salvar_agora(foto, aj):
         _render(origem, temporario, aj)                   # primeiro revela: se falhar, nada foi mexido
         if not _jpeg_ok(temporario):
             raise RuntimeError("o arquivo editado saiu inválido")
+        metadados.marcar(temporario, metadados.info_de(origem))   # a foto editada leva a marca (e os dados) da original
         st = os.stat(origem)
         os.utime(temporario, (st.st_atime, st.st_mtime))  # a ordem das fotos e pela data
         if origem == foto:                                # primeira edicao: guarda a original
