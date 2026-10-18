@@ -875,16 +875,23 @@ async function vDescarregar() {
     q('#b-abrir').onclick = () => api('/api/revisor/abrir-pasta', { body: {} }).catch(e => toast(e.message, true));
     q('#b-novo').onclick = async () => { await api('/api/transferencia/nova', { body: {} }); S.sel.nome = ''; S.sel.outro = ''; S.sel.driveManual = false; W.step = 1; W.pastas = []; W.previa = null; W.fotografo = ''; S.finalPath = ''; S.oChave = null; await carregar(); vDescarregar(); };
     q('#s-drive').onchange = e => { S.sel.drive = e.target.value; S.sel.driveManual = true; };
-    // preset em todas as fotos: salva em segundo plano pela fila do editor; o envio ao Drive espera terminar
+    // preset em todas as fotos: salva em segundo plano pela fila do editor. Enquanto aplica, a tela de loading cobre
+    // tudo (nada embaixo pode ser usado) e o envio ao Drive so libera no fim; o servidor tambem recusa o envio.
     const travarPreset = () => { const b = q('#b-pre'), s = q('#s-pre'); if (b && s) travar(b, s.value ? '' : 'Escolha um preset para aplicar.', q('#b-pre').closest('.row')); };
     const acompanharPreset = async () => {
       let t; try { t = await api('/api/transferencia/status'); } catch (e) { return; }
-      const el = q('#pre-st'); if (!el) return pararPoll();
-      if (t.edicoes_pendentes) { el.textContent = `Aplicando o preset… faltam ${t.edicoes_pendentes} foto(s).`; return; }
-      pararPoll(); if (S.presetAplicado) { el.textContent = `Preset "${S.presetAplicado}" aplicado em todas as fotos.`; S.presetAplicado = ''; }
-      travarPreset();          // da para aplicar outro em seguida
+      if (S.view !== 'descarregar' || !q('#b-up')) { telaPreset(null); return pararPoll(); }
+      if (telaPreset(t.preset)) return;
+      pararPoll(); travarPreset();          // da para aplicar outro em seguida
+      const p = t.preset, el = q('#pre-st');
+      if (p && S.presetVisto) {
+        S.presetVisto = false;
+        const msg = p.nome ? `Preset "${p.nome}" aplicado em ${fmtNum(p.total - p.erros)} foto(s).` : `${fmtNum(p.total - p.erros)} foto(s) salvas.`;
+        if (el) el.textContent = msg + (p.erros ? ` ${p.erros} não puderam ser salvas (veja o log).` : '');
+        toast(p.erros ? `${msg} ${p.erros} com erro.` : msg, !!p.erros);
+      }
     };
-    if (tr.edicoes_pendentes && q('#pre-st')) { acompanharPreset(); iniciarPoll(acompanharPreset, 1500); }
+    if (tr.preset && tr.preset.rodando) { telaPreset(tr.preset); iniciarPoll(acompanharPreset, 1000); }
     if (q('#s-pre')) {
       travarPreset();
       q('#s-pre').onchange = travarPreset;
@@ -893,9 +900,9 @@ async function vDescarregar() {
         if (!await confirmar('Preset em todas as fotos', `Aplicar o preset "${p.nome}" nas ${st.transferidas} foto(s)?\n\nA luz e a cor de cada foto são trocadas pelas do preset; o corte fica como está. A original continua guardada (dá para restaurar no editor).`, 'Aplicar em todas', 'Cancelar')) return;
         travar(btn, 'Aplicando o preset…', btn.closest('.row'));
         try {
-          await api('/api/editor/aplicar', { body: { indices: [...Array(st.transferidas).keys()], ajustes: p.ajustes, grupos: ['luz', 'curva', 'cor'] } });
-          S.presetAplicado = p.nome; toast(`Aplicando o preset "${p.nome}" em ${st.transferidas} foto(s)`);
-          acompanharPreset(); iniciarPoll(acompanharPreset, 1500);
+          await api('/api/editor/aplicar', { body: { indices: [...Array(st.transferidas).keys()], ajustes: p.ajustes, grupos: ['luz', 'curva', 'cor'], nome: p.nome } });
+          telaPreset({ nome: p.nome, total: st.transferidas, feitos: 0, erros: 0, rodando: true });   // abre na hora, sem esperar o 1o status
+          acompanharPreset(); iniciarPoll(acompanharPreset, 1000);
         } catch (er) { toast(er.message, true); travarPreset(); }
       };
     }
@@ -911,6 +918,32 @@ async function vDescarregar() {
       setTimeout(() => { btn.disabled = false; }, 1500);
     };
   }
+}
+
+// tela de loading do "preset em todas as fotos": cobre a tela inteira enquanto o lote salva (sem botao de fechar:
+// o voluntario espera). Recebe o "preset" do status; devolve true enquanto estiver aberta.
+function telaPreset(p) {
+  let bg = document.getElementById('carregando-preset');
+  if (!p || !p.rodando) {
+    if (bg) { bg.remove(); const b = document.getElementById('b-up'); if (b) b.focus(); }
+    return false;
+  }
+  if (!bg) {
+    S.presetVisto = true;
+    bg = document.createElement('div'); bg.id = 'carregando-preset'; bg.className = 'modal-bg carregando';
+    bg.innerHTML = `<div class="modal" role="alertdialog" aria-modal="true" aria-busy="true" aria-labelledby="cp-titulo" aria-describedby="cp-num" tabindex="-1">
+      ${mascote('recebendo', 84)}<h2 id="cp-titulo"></h2><progress id="cp-barra" max="1" value="0"></progress>
+      <p class="cp-num" id="cp-num" aria-live="polite"></p>
+      <p class="mut mini">Aguarde nesta tela. O envio para o Drive é liberado quando todas as fotos estiverem prontas.</p></div>`;
+    // nada embaixo responde ao teclado (atalhos da tela, Tab, Esc) enquanto o loading estiver aberto
+    bg.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Tab' || e.key === 'Escape') e.preventDefault(); });
+    $modal.appendChild(bg);
+    requestAnimationFrame(() => bg.querySelector('.modal').focus());
+  }
+  bg.querySelector('#cp-titulo').textContent = p.nome ? `Aplicando o preset "${p.nome}"` : 'Salvando as fotos editadas';
+  bg.querySelector('#cp-barra').value = p.total ? p.feitos / p.total : 0;
+  bg.querySelector('#cp-num').textContent = `${fmtNum(p.feitos)} de ${fmtNum(p.total)} fotos`;
+  return true;
 }
 
 async function finalizarServir(ignorar) {

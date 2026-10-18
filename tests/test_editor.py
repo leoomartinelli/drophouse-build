@@ -4,6 +4,7 @@ Os testes que revelam fotos usam o lightcraft-cli de verdade (packaging/baixar_l
 import io
 import json
 import os
+import threading
 import time
 
 import test_painel  # noqa: F401  (configura DATA_DIR/FOTOS_DIR temporarios antes de importar o app)
@@ -464,3 +465,57 @@ def test_preset_em_todas_pela_tela_de_concluido():
     esperar_salvar()
     assert local.get("/api/transferencia/status").json()["edicoes_pendentes"] == 0
     assert all(f["editada"] for f in local.get("/api/editor").json()["fotos"])
+
+
+# ---------- tela de loading do "preset em todas as fotos" (issue #26) ----------
+
+def _fila_vazia():
+    if editor._worker:                                # worker de um teste anterior ainda vivo: espera ele sair
+        editor._worker.join()
+    editor.SALVANDO.clear()
+
+
+def _status():
+    return local.get("/api/transferencia/status").json()
+
+
+def test_loading_do_preset_bloqueia_o_drive_ate_terminar(monkeypatch, tmp_path):
+    from app import drive
+    _fila_vazia()
+    liberar = threading.Event()
+    monkeypatch.setattr(editor, "salvar_agora", lambda foto, aj: liberar.wait(10) and foto)
+    monkeypatch.setattr(drive, "iniciar_upload", lambda link, fotografo="": {"ok": True})
+    fotos = [str(tmp_path / f"p{k}.jpg") for k in range(3)]
+    for f in fotos:
+        Image.new("RGB", (20, 20)).save(f)
+    E.arquivos_transferidos = list(fotos)
+
+    r = local.post("/api/editor/aplicar", json={"indices": [0, 1, 2], "ajustes": {"valores": {"light.exposure": 0.5}},
+                                                "grupos": ["luz", "curva", "cor"], "nome": "Lareira"})
+    assert r.status_code == 200
+    p = _status()["preset"]                           # a tela abre o loading com o progresso
+    assert p["rodando"] and p["nome"] == "Lareira" and p["total"] == 3 and p["feitos"] < 3 and p["erros"] == 0
+    r = local.post("/api/upload/iniciar", json={"link": ""})   # durante o loading o Drive fica bloqueado
+    assert r.status_code == 400 and "salvando" in r.json()["detail"]
+
+    liberar.set()
+    for _ in range(100):
+        if not _status()["preset"]["rodando"]:
+            break
+        time.sleep(0.05)
+    assert _status()["preset"] == {"nome": "Lareira", "total": 3, "feitos": 3, "erros": 0, "rodando": False}
+    assert local.post("/api/upload/iniciar", json={"link": ""}).status_code == 200   # terminou: o Drive libera
+    local.post("/api/transferencia/nova", json={})
+    assert _status()["preset"] is None                # o lote terminado nao aparece no proximo descarregamento
+
+
+def test_sem_preset_nao_tem_loading_e_o_drive_libera(monkeypatch, tmp_path):
+    from app import drive
+    _fila_vazia()
+    editor.LOTE.clear()
+    monkeypatch.setattr(drive, "iniciar_upload", lambda link, fotografo="": {"ok": True})
+    foto = str(tmp_path / "s.jpg")
+    Image.new("RGB", (20, 20)).save(foto)
+    E.arquivos_transferidos = [foto]
+    assert _status()["preset"] is None and _status()["edicoes_pendentes"] == 0
+    assert local.post("/api/upload/iniciar", json={"link": ""}).status_code == 200

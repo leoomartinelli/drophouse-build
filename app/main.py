@@ -436,7 +436,8 @@ def iniciar_transferencia(d: dict = Body(...)):
 @app.get("/api/transferencia/status")
 def status_transferencia():
     # edicoes_pendentes: preset aplicado em todas as fotos ainda salvando (a tela mostra quantas faltam)
-    return {**E.transfer, "edicoes_pendentes": editor.pendentes()}
+    # preset: progresso do "aplicar em todas as fotos" (a tela mostra o loading enquanto "rodando")
+    return {**E.transfer, "edicoes_pendentes": editor.pendentes(), "preset": editor.situacao_lote()}
 
 
 @app.post("/api/transferencia/cancelar")
@@ -450,6 +451,9 @@ def cancelar_transferencia():
 def nova_transferencia():
     E.arquivos_transferidos = []
     E.transfer = {"estado": "idle", "progresso": 0, "total": 0, "feitos": 0, "msg": ""}
+    lote = editor.situacao_lote()
+    if lote and not lote["rodando"]:     # o preset do descarregamento anterior ja terminou: nao aparece no proximo
+        editor.LOTE.clear()
     painel.liberar()
     # os envios ao Drive em andamento NAO sao tocados: continuam em segundo plano
     return {"ok": True}
@@ -566,9 +570,9 @@ def editor_balanco(i: int, d: dict = Body(...)):
 
 @app.post("/api/editor/aplicar")
 def editor_aplicar(d: dict = Body(...)):
-    """Cola ajustes copiados em varias fotos: {indices, ajustes, grupos: [luz, curva, cor]}."""
+    """Cola ajustes copiados em varias fotos: {indices, ajustes, grupos: [luz, curva, cor], nome?: preset}."""
     fotos = [_foto(int(i)) for i in d.get("indices", [])]
-    editor.aplicar_em(fotos, d.get("ajustes"), d.get("grupos"))
+    editor.aplicar_em(fotos, d.get("ajustes"), d.get("grupos"), d.get("nome"))
     return {"ok": True, "fotos": len(fotos)}
 
 

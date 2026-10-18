@@ -652,3 +652,10 @@ body.pausado .mascote *,body.pausado .simbolo *,body.pausado .wordmark,body.tela
 /* logo parado (3 ciclos sem ninguem mexer): nada anima, nem os olhos; o mouse e o clique continuam funcionando */
 .simbolo.quieto .dh-caixa,.simbolo.quieto .dh-olhos,.simbolo.quieto .dh-olho,.simbolo.quieto+.wordmark{animation:none}
 @media(prefers-reduced-motion:reduce){.mascote,.mascote *,.confete{animation:none!important}}
+/* loading do "preset em todas as fotos": cobre a tela inteira ate todas as fotos ficarem prontas */
+.carregando .modal{max-width:440px;text-align:center;white-space:normal;display:flex;flex-direction:column;align-items:center;gap:6px;outline:none}
+.carregando .modal h2{margin:8px 0 2px}
+.carregando progress{height:12px;margin-top:6px}
+.carregando .cp-num{font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums;margin:6px 0 0}
+.carregando .mini{margin:4px 0 0}
+
