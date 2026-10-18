@@ -408,8 +408,13 @@ def mesclar(base, copiados, grupos):
     return limpar(novo)
 
 
-def aplicar_em(fotos, copiados, grupos):
-    """Cola os ajustes em varias fotos (cada uma mantem o que nao foi copiado) e salva em segundo plano."""
+def aplicar_em(fotos, copiados, grupos, nome=""):
+    """Cola os ajustes em varias fotos (cada uma mantem o que nao foi copiado) e salva em segundo plano.
+    nome: o preset aplicado (a tela de loading mostra), vazio quando sao ajustes colados."""
+    fotos = list(fotos)
+    with _lock_fila:
+        LOTE.clear()
+        LOTE.update(nome=str(nome or "")[:60], fotos=fotos, total=len(fotos))
     for foto in fotos:
         salvar(foto, mesclar(ajustes_de(foto), copiados, grupos))
 
@@ -631,6 +636,22 @@ def _trabalhar():
 
 def pendentes():
     return sum(1 for v in SALVANDO.values() if v == "salvando")
+
+
+# o ultimo "aplicar em varias fotos" (preset em todas as fotos ou colar em varias): a tela mostra o loading com o
+# progresso dele e so libera o envio ao Drive no fim
+LOTE = {}
+
+
+def situacao_lote():
+    """{"nome", "total", "feitos", "erros", "rodando"} do ultimo lote; None se nenhum foi aplicado."""
+    with _lock_fila:
+        if not LOTE:
+            return None
+        estados = [SALVANDO.get(_atual(f), "") for f in LOTE["fotos"]]
+    faltam = sum(1 for e in estados if e == "salvando")
+    return {"nome": LOTE["nome"], "total": LOTE["total"], "feitos": LOTE["total"] - faltam,
+            "erros": sum(1 for e in estados if e.startswith("erro")), "rodando": faltam > 0}
 
 
 def situacao():
