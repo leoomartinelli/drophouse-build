@@ -237,11 +237,91 @@ def coletar(pastas, so_novas, tamanhos=None):
     return _separar(grupos, so_novas)
 
 
+# ---------- data de cada foto (fotos de dias diferentes no mesmo cartao) ----------
+# O voluntario usa o proprio cartao sem formatar: fotos pessoais antigas chegam junto com as do culto. Antes de copiar,
+# a tela agrupa por dia e sugere descarregar so as do dia mais recente.
+
+_datas = {}                     # (caminho, mtime, tamanho) -> "AAAA-MM-DD" (o cartao e lento: le cada foto uma vez)
+_lock_datas = threading.Lock()
+TAG_EXIF, TAG_DATA_ORIGINAL, TAG_DATA = 0x8769, 36867, 306
+
+
+def _data_exif(caminho):
+    """Data em que a foto foi tirada (EXIF DateTimeOriginal; senao DateTime), "AAAA-MM-DD"; None se nao houver.
+    So o cabecalho e lido (o Pillow nao decodifica a imagem). CR3 e video nao tem EXIF legivel aqui."""
+    from PIL import Image
+    try:
+        with Image.open(caminho) as im:
+            exif = im.getexif()
+            texto = exif.get_ifd(TAG_EXIF).get(TAG_DATA_ORIGINAL) or exif.get(TAG_DATA)
+    except Exception:
+        return None
+    texto = str(texto or "").strip()
+    if len(texto) >= 10 and texto[4] in ":-" and texto[7] in ":-" and texto[:4].isdigit() and texto[:4] != "0000":
+        return f"{texto[:4]}-{texto[5:7]}-{texto[8:10]}"
+    return None
+
+
+def data_da_foto(caminho, mtime=None, tamanho=None):
+    """Dia da foto: o do EXIF e, sem EXIF, o da data do arquivo (hora local)."""
+    if mtime is None:
+        try:
+            st = os.stat(caminho)
+            mtime, tamanho = st.st_mtime, st.st_size
+        except OSError:
+            return None
+    chave = (caminho, mtime, tamanho)
+    with _lock_datas:
+        if chave in _datas:
+            return _datas[chave]
+    data = None if caminho.lower().endswith(".mp4") else _data_exif(caminho)
+    if data is None and mtime:
+        data = time.strftime("%Y-%m-%d", time.localtime(mtime))
+    with _lock_datas:
+        _datas[chave] = data
+    return data
+
+
+def _info(grupos):
+    return {os.path.join(subdir, n): (mt, tam) for subdir, fotos in grupos for n, mt, tam in fotos}
+
+
+def dias(arquivos, info=None):
+    """[{"data", "fotos", "exemplo"}] do dia mais antigo ao mais recente. "exemplo": caminho de uma foto daquele dia
+    relativo ao cartao (a tela mostra a miniatura); fotos sem data nenhuma ficam fora da contagem."""
+    info = info or {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:     # cartao lento: le varios cabecalhos juntos
+        datas = list(ex.map(lambda a: data_da_foto(a, *info.get(a, (None, None))), arquivos))
+    por_dia = {}
+    for a, d in zip(arquivos, datas):
+        if not d:
+            continue
+        dia = por_dia.setdefault(d, {"data": d, "fotos": 0, "exemplo": None})
+        dia["fotos"] += 1
+        if dia["exemplo"] is None and a.lower().endswith(core.EXT_IMG):
+            dia["exemplo"] = os.path.relpath(a, E.drive_path)
+    return [por_dia[d] for d in sorted(por_dia)]
+
+
+def miniatura_do_cartao(relativo):
+    """Caminho de uma foto do cartao para a miniatura de exemplo; None se estiver fora do cartao ou nao for foto."""
+    if not E.drive_path or not relativo:
+        return None
+    raiz = os.path.realpath(E.drive_path)
+    alvo = os.path.realpath(os.path.join(raiz, os.path.normpath(str(relativo))))
+    if os.path.commonpath([raiz, alvo]) != raiz or not alvo.lower().endswith(core.EXT_IMG) or not os.path.isfile(alvo):
+        return None
+    return alvo
+
+
 def planejar(pastas):
     grupos = _varrer(pastas)                           # uma varredura so para as duas contagens
     novas, ja, total = _separar(grupos, so_novas=True)
     todas, _, _ = _separar(grupos, so_novas=False)
+    info = _info(grupos)
     return {
+        # fotos por dia (do mais antigo ao mais recente): mais de um dia = a tela pergunta quais descarregar
+        "dias_novas": dias(novas, info), "dias_todas": dias(todas, info),
         "total_encontrados": total,
         "ja_descarregados": ja,
         "novas": len(novas),
@@ -306,10 +386,11 @@ def cancelar():
 
 # ---------- copia ----------
 
-def iniciar(fotografo, destino_base, pastas, categoria, criar_subpasta, modo, converter_raw=False):
+def iniciar(fotografo, destino_base, pastas, categoria, criar_subpasta, modo, converter_raw=False, so_dias=None):
     """modo: 'novas' (apenas apos o ultimo marcador) ou 'todas'.
 
-    converter_raw: depois de copiar, transforma as copias RAW do PC em JPEG e apaga essas copias RAW."""
+    converter_raw: depois de copiar, transforma as copias RAW do PC em JPEG e apaga essas copias RAW.
+    so_dias: lista de "AAAA-MM-DD"; se vier, copia so as fotos desses dias (cartao com fotos de dias diferentes)."""
     if E.transfer["estado"] == "rodando":
         raise RuntimeError("Ja existe uma transferencia em andamento.")
     destino = core.calcular_caminho_final(destino_base, fotografo, categoria, criar_subpasta)
@@ -319,6 +400,11 @@ def iniciar(fotografo, destino_base, pastas, categoria, criar_subpasta, modo, co
     arquivos, _, _ = coletar(pastas, so_novas=(modo == "novas"), tamanhos=tamanhos)
     if not arquivos:
         raise RuntimeError("Nenhuma imagem encontrada nas pastas selecionadas.")
+    if so_dias:
+        escolhidos = set(so_dias)
+        arquivos = [a for a in arquivos if data_da_foto(a) in escolhidos]
+        if not arquivos:
+            raise RuntimeError("Nenhuma foto nas datas escolhidas.")
     if converter_raw and not raw.disponivel():
         raise RuntimeError("O conversor de RAW para JPEG não está instalado neste computador.")
     E.arquivos_transferidos = []

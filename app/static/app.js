@@ -585,11 +585,18 @@ async function vHome() {
 // ---------- DESCARREGAMENTO (assistente passo a passo) ----------
 const PASSOS = ['Origem', 'Fotógrafo', 'Destino', 'Copiando', 'Finalizar'];
 async function vDescarregar() {
-  const st = S.st, sv = st.active_servir;
+  let st = S.st;
+  const sv = st.active_servir;
   S.entrou = true; S.avulso = !sv;
   const W = S.wiz || (S.wiz = { step: 1, pastas: [] });
   const tr = await api('/api/transferencia/status');
-  if (tr.estado === 'rodando') W.step = 4;
+  // uma copia curta (poucas fotos) termina antes desta tela: o status ja diz "concluido", mas S.st ainda e de antes
+  // da copia (0 fotos) e a tela voltava para o passo 2 (ou saia com "Nenhuma foto disponivel"). Busca o estado de novo.
+  if (tr.estado === 'concluido' && !st.transferidas && tr.revisaveis > 0) { await carregar(); st = S.st; }
+  // logo depois de iniciar, passa sempre pelo passo "Copiando", mesmo que a copia (curta) ja tenha terminado: e ele
+  // que comemora e pergunta "Abrir a seleção agora?" (ou mostra o erro / o cancelamento)
+  const acabouDeIniciar = W.recemIniciado; W.recemIniciado = false;
+  if (tr.estado === 'rodando' || (acabouDeIniciar && ['concluido', 'erro', 'cancelado'].includes(tr.estado))) W.step = 4;
   else if (tr.estado === 'concluido' && st.transferidas > 0) W.step = 5;
   else if (W.step >= 4) W.step = sv ? 2 : 3;
   if (sv && W.step === 3) W.step = 2;
@@ -728,7 +735,9 @@ async function vDescarregar() {
       try {
         if (livre != null && W.previa && W.previa.bytes > livre &&
           !await confirmar('Pode faltar espaço', `As fotos ocupam cerca de ${fmtBytes(W.previa.bytes)}, mas o disco de destino tem ${fmtBytes(livre)} livres.\n\nA cópia pode parar no meio.`, 'Copiar mesmo assim', 'Cancelar', true)) return;
-        const plano = await api('/api/transferencia/plano', { body });
+        // ler a data de cada foto num cartao lento pode levar uns segundos: avisa se demorar
+        const aviso = setTimeout(() => toast('Lendo as datas das fotos do cartão…'), 700);
+        let plano; try { plano = await api('/api/transferencia/plano', { body }); } finally { clearTimeout(aviso); }
         if (plano.total_encontrados === 0) return alerta('Informação', 'Nenhuma imagem encontrada nas pastas selecionadas.');
         let modo = 'novas';
         if (plano.novas === 0 && plano.ja_descarregados > 0) {
@@ -737,6 +746,10 @@ async function vDescarregar() {
         } else if (plano.novas > 0 && plano.ja_descarregados > 0) {
           if (!await confirmar('Fotos já descarregadas', `${plano.ja_descarregados} foto(s) desta pasta já foram descarregadas antes.\n\nDescarregar só as ${plano.novas} novas?\n(Se escolher "Não", todas as ${plano.todas} serão copiadas.)`)) modo = 'todas';
         }
+        // cartao com fotos de mais de um dia (fotos pessoais antigas junto com as do culto): pergunta quais dias
+        const porDia = (modo === 'novas' ? plano.dias_novas : plano.dias_todas) || [];
+        let dias = [];
+        if (porDia.length > 1) { dias = await escolherDias(porDia); if (dias === null) return; }
         const temRaw = modo === 'novas' ? plano.tem_raw_novas : plano.tem_raw;
         let converter_raw = false;
         if (temRaw && plano.pode_converter_raw) {
@@ -745,8 +758,8 @@ async function vDescarregar() {
           if (r === null) return;
           converter_raw = r;
         } else if (temRaw && !await confirmar('Fotos em RAW', 'Há fotos em RAW (.cr3, .cr2, .nef, .arw) nas pastas selecionadas.\n\nElas serão copiadas no formato original. Continuar?')) return;
-        await api('/api/transferencia/iniciar', { body: { ...body, modo, converter_raw } });
-        W.fotografo = nomeFot();
+        await api('/api/transferencia/iniciar', { body: { ...body, modo, converter_raw, dias } });
+        W.fotografo = nomeFot(); W.recemIniciado = true;
         ir_(4);
       } catch (e) { toast(e.message, true); }
   }
@@ -919,6 +932,51 @@ async function vDescarregar() {
       setTimeout(() => { btn.disabled = false; }, 1500);
     };
   }
+}
+
+// cartao com fotos de dias diferentes: lista cada dia (miniatura, data e quantidade) e sugere so o mais recente.
+// Devolve os dias escolhidos ("AAAA-MM-DD"), [] para todas, ou null se cancelar.
+function escolherDias(lista) {
+  return new Promise(res => {
+    const hoje = new Date().toLocaleDateString('sv-SE'), recente = lista[lista.length - 1];
+    const dataBR = d => d.split('-').reverse().join('/');
+    const total = lista.reduce((a, d) => a + d.fotos, 0);
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal larga dias-modal"><h2>Fotos de datas diferentes</h2>
+      <p class="dias-intro">Encontramos fotos de datas diferentes neste cartão:</p>
+      <div class="dias-lista">${lista.map(d => `<label class="dia ${d === recente ? 'recente' : ''}">
+        <input type="checkbox" value="${esc(d.data)}" ${d === recente ? 'checked' : ''}>
+        <span class="dia-mini">${d.exemplo ? `<img src="/api/origem/miniatura?caminho=${encodeURIComponent(d.exemplo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
+        <span class="dia-txt"><b>${dataBR(d.data)}${d.data === hoje ? ' <span class="hoje">hoje</span>' : ''}</b><span class="mut">${fmtNum(d.fotos)} foto(s)</span></span></label>`).join('')}</div>
+      <button type="button" class="link-dias" id="dd-escolher">Escolher quais datas…</button>
+      <p class="dias-pergunta" id="dd-pergunta"></p><div class="btns" id="dd-btns"></div></div>`;
+    $modal.appendChild(bg);
+    const $ = s => bg.querySelector(s), caixa = $('.dias-modal');
+    const fim = v => { bg.remove(); res(v); };
+    const marcados = () => [...bg.querySelectorAll('.dia input:checked')].map(i => i.value);
+    function resumo() {
+      caixa.classList.remove('escolhendo');
+      $('#dd-pergunta').textContent = `Vamos descarregar só as mais recentes (${fmtNum(recente.fotos)} foto(s) de ${dataBR(recente.data)})?`;
+      $('#dd-btns').innerHTML = `<button class="cinza" id="dd-cancelar">Cancelar</button><button class="cinza" id="dd-todas">Descarregar todas (${fmtNum(total)})</button><button id="dd-recentes" data-foco>Só as mais recentes</button>`;
+      $('#dd-cancelar').onclick = () => fim(null); $('#dd-todas').onclick = () => fim([]); $('#dd-recentes').onclick = () => fim([recente.data]);
+      $('#dd-recentes').focus();
+    }
+    function escolher() {
+      caixa.classList.add('escolhendo');
+      const conta = () => {
+        const sel = marcados(), n = lista.filter(d => sel.includes(d.data)).reduce((a, d) => a + d.fotos, 0), b = $('#dd-ok');
+        b.disabled = !sel.length; b.textContent = sel.length ? `Descarregar ${fmtNum(n)} foto(s)` : 'Marque pelo menos um dia';
+      };
+      $('#dd-pergunta').textContent = 'Marque os dias que vão ser descarregados.';
+      $('#dd-btns').innerHTML = `<button class="cinza" id="dd-voltar">Voltar</button><button id="dd-ok"></button>`;
+      $('#dd-voltar').onclick = resumo; $('#dd-ok').onclick = () => { const sel = marcados(); fim(sel.length === lista.length ? [] : sel); };
+      bg.querySelectorAll('.dia input').forEach(i => i.onchange = conta); conta();
+      bg.querySelector('.dia input').focus();
+    }
+    $('#dd-escolher').onclick = escolher;
+    dialogo(bg, () => fim(null));
+    resumo();
+  });
 }
 
 // tela de loading do "preset em todas as fotos": cobre a tela inteira enquanto o lote salva (sem botao de fechar:
@@ -1645,9 +1703,9 @@ async function abrirRevisor() {
   const el = document.createElement('div'); el.className = 'rev';
   el.innerHTML = `<div class="bar"><button class="cinza" id="r-ant">${ic('ant')}Anterior</button><div class="info" id="r-info"></div><button class="cinza" id="r-prox">Próxima${ic('prox')}</button>
     <span class="zgrupo"><button class="cinza" id="r-zm" title="Diminuir zoom (−)">−</button><button class="cinza" id="r-zt" title="Alternar entre tela inteira e 100% (duplo clique na foto)">Tela inteira</button><button class="cinza" id="r-zp" title="Aumentar zoom (+)">+</button></span>
-    <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)" aria-label="Sair da seleção">${ic('x')}</button></div>
+    <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-atalhos" title="Atalhos do teclado (?)" aria-label="Atalhos do teclado">${ic('teclado')}</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)" aria-label="Sair da seleção">${ic('x')}</button></div>
     <div class="stage" id="r-stage"><img id="r-img" alt=""><div class="stamp hidden" id="r-stamp">DESCARTADA</div></div>
-    <div class="strip" id="r-strip"></div><div class="kbd">← → navegar · Del/Backspace/X descartar · Ctrl+Z desfazer · Enter finalizar · Esc sair<br>Várias fotos: Shift + clique (ou Shift + ← →) seleciona o intervalo · Ctrl + clique soma ou tira · Ctrl+A todas · Esc limpa a seleção<br>Zoom: roda do mouse ou pinça · arrastar move · duplo clique ou 1 = 100% · + − · 0 = tela inteira</div>`;
+    <div class="strip" id="r-strip"></div>`;
   document.body.appendChild(el); document.body.classList.add('tela-cheia');   // o logo do topo para atras da selecao
   const $ = s => el.querySelector(s); const img = $('#r-img');
   const zoom = criarZoom($('#r-stage'), img, t => { $('#r-zt').textContent = t; });
@@ -1736,13 +1794,20 @@ async function abrirRevisor() {
     else if (ctrl && e.key.toLowerCase() === 'a') { e.preventDefault(); sel = Selecao.tudo(lista.length); ancora = 0; mostra(); }
     else if (e.key === 'Enter') finalizar();
     else if (e.key === 'Escape') { if (sel.size > 1) { sel = new Set([i]); ancora = i; mostra(); } else sair(); }
-    else if (e.key === '?') alerta('Atalhos da seleção', '← →  foto anterior / próxima\nDel, Backspace ou X  descartar (as selecionadas, se houver várias)\nShift + clique ou Shift + ← →  selecionar o intervalo\nCtrl + clique  somar ou tirar da seleção\nCtrl+A  selecionar todas\nCtrl+Z  desfazer\nEnter  finalizar\nEsc  limpar a seleção / sair\n+ −  zoom · 0 tela inteira · 1 ou duplo clique 100%');
+    else if (e.key === '?') atalhos();
     else if (e.key === '+' || e.key === '=') zoom.mais(); else if (e.key === '-' || e.key === '_') zoom.menos();
     else if (e.key === '0') zoom.ajustar(); else if (e.key === '1') zoom.cem();
   }
   document.addEventListener('keydown', tecla);
   $('#r-ant').onclick = () => ant(); $('#r-prox').onclick = () => prox(); $('#r-desc').onclick = descartar; $('#r-undo').onclick = desfazer;
-  $('#r-fim').onclick = finalizar; $('#r-sair').onclick = sair;
+  // atalhos numa janela (botao de teclado na barra de cima, ou tecla ?), como no editor
+  const atalhos = () => modal(`<h2>Atalhos da seleção</h2><table class="ed-atalhos">${[
+    ['← →', 'Foto anterior / próxima'], ['Del, Backspace ou X', 'Descartar (as selecionadas, se houver várias)'], ['Ctrl+Z', 'Desfazer'],
+    ['Shift + clique', 'Selecionar o intervalo (ou Shift + ← →)'], ['Ctrl + clique', 'Somar ou tirar da seleção'], ['Ctrl+A', 'Selecionar todas'],
+    ['Esc', 'Limpar a seleção (com uma foto só: sair)'], ['Enter', 'Finalizar a seleção'],
+    ['Roda do mouse, + −', 'Zoom (pinça na tela de toque)'], ['1 ou duplo clique', '100% (pixel real)'], ['0', 'Tela inteira'], ['Arrastar', 'Mover a foto com zoom']
+  ].map(([t, d]) => `<tr><td><kbd>${esc(t)}</kbd></td><td>${esc(d)}</td></tr>`).join('')}</table>`, [{ t: 'Fechar', v: true }]);
+  $('#r-fim').onclick = finalizar; $('#r-sair').onclick = sair; $('#r-atalhos').onclick = atalhos;
   $('#r-zm').onclick = zoom.menos; $('#r-zp').onclick = zoom.mais; $('#r-zt').onclick = zoom.alternar;
   mostra();
 }

@@ -379,6 +379,19 @@ def previa_origem(d: dict = Body(...)):
     return transfer.previa(d.get("pastas") or [])
 
 
+@app.get("/api/origem/miniatura")
+def miniatura_origem(caminho: str):
+    """Miniatura de uma foto do cartao (exemplo de cada dia quando o cartao tem fotos de datas diferentes).
+    So serve fotos de dentro do cartao/origem: o caminho e relativo a ele."""
+    alvo = transfer.miniatura_do_cartao(caminho)
+    if not alvo:
+        erro("Foto não encontrada no cartão.", 404)
+    try:
+        return Response(review.renderizar(alvo, 160), media_type="image/jpeg", headers={"Cache-Control": "private, max-age=600"})
+    except Exception as e:
+        erro(f"Erro ao carregar a miniatura: {e}", 500)
+
+
 def _espaco_livre(caminho):
     """Espaco livre no disco do destino (sobe ate a primeira pasta que ja existe)."""
     p = os.path.abspath(caminho or "")
@@ -428,7 +441,8 @@ def iniciar_transferencia(d: dict = Body(...)):
     E.destino_base = d["destino_base"]
     try:
         return transfer.iniciar(fot, d["destino_base"], d["pastas"], d.get("categoria", "Raiz (Nenhuma)"),
-                                d.get("subpasta", True), d.get("modo", "novas"), bool(d.get("converter_raw")))
+                                d.get("subpasta", True), d.get("modo", "novas"), bool(d.get("converter_raw")),
+                                [str(x) for x in d.get("dias") or []])
     except RuntimeError as e:
         erro(str(e))
 
