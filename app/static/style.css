@@ -699,7 +699,9 @@ body.pausado .mascote *,body.pausado .simbolo *,body.pausado .wordmark,body.tela
 .sep .sp-marcar{display:flex;gap:6px;align-items:center}
 .sep .sp-marcar select{width:auto;min-width:220px;max-width:340px}
 .sp-corpo{flex:1;display:flex;min-height:0}
-.sp-grade{flex:1;overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-content:start;user-select:none;-webkit-user-select:none}
+/* grid-auto-rows: max-content: a grade tem altura fixa (flex) e a miniatura e aspect-ratio com overflow hidden; sem
+   isso o navegador encolhia as linhas (61px para miniaturas de 100px) e, com muitas fotos, uma ficava em cima da outra */
+.sp-grade{flex:1;overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:max-content;gap:10px;align-content:start;user-select:none;-webkit-user-select:none}
 .sp-pausa{grid-column:1/-1;display:flex;align-items:center;gap:8px;color:var(--lar);font-size:.85rem;font-weight:600;padding:6px 2px 0;border-top:1px dashed var(--bord2);margin-top:4px}
 .sp-pausa .ic{width:15px;height:15px}
 .sp-foto{position:relative;display:block;padding:0;border:2px solid transparent;border-radius:12px;overflow:hidden;background:var(--card2);aspect-ratio:3/2;cursor:pointer}
