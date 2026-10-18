@@ -6,7 +6,7 @@ import time
 
 import psutil
 
-from . import core, lan, painel, raw, stats
+from . import core, lan, metadados, painel, raw, stats
 from .core import E
 
 
@@ -420,8 +420,11 @@ def iniciar(fotografo, destino_base, pastas, categoria, criar_subpasta, modo, co
 
 
 def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False, tamanhos=None):
-    import shutil
     t0 = time.time()
+    # marca do DropHouse nos metadados de cada JPEG copiado (issue #34): gravada durante a copia, num passe so
+    categoria = (E.transfer.get("resumo") or {}).get("categoria") or ""
+    marca = {"voluntario": fotografo, "servir": (E.active_servir or {}).get("nome", ""),
+             "categoria": "" if categoria == "Raiz (Nenhuma)" else categoria}
     try:
         os.makedirs(destino, exist_ok=True)
         _ordenar_por_data(arquivos)
@@ -464,7 +467,7 @@ def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False, t
                 alvo = os.path.join(destino, f"{base}_{c}{e2}")
                 c += 1
             try:
-                shutil.copy2(origem, alvo)
+                metadados.copiar_marcando(origem, alvo, marca)    # JPEG sai marcado; outro formato copia como esta
                 with lock:
                     copiados.append(origem)
                     if alvo.lower().endswith(core.EXT_IMG):
@@ -497,7 +500,7 @@ def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False, t
                 print(f"Erro ao registrar tempo de descarregamento: {e}")
         falhas_raw = []
         if converter_raw:
-            transferidos, falhas_raw = _converter_raws(destino, transferidos)
+            transferidos, falhas_raw = _converter_raws(destino, transferidos, marca)
         # as copias terminam fora de ordem (4 threads): ordena pelo nome para o revisor
         transferidos.sort(key=lambda p: os.path.basename(p).lower())
         E.arquivos_transferidos = transferidos
@@ -516,7 +519,7 @@ def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False, t
         painel.erro_copia()
 
 
-def _converter_raws(destino, transferidos):
+def _converter_raws(destino, transferidos, marca=None):
     """Troca as copias RAW do PC por JPEG. Devolve (lista atualizada, RAWs que nao converteram)."""
     raws = [p for p in transferidos if p.lower().endswith(core.EXT_RAW)]
     if not raws:
@@ -527,7 +530,7 @@ def _converter_raws(destino, transferidos):
 
     E.transfer.update(fase="convertendo", feitos=0, total=len(raws), progresso=0,
                       msg="Convertendo RAW para JPEG...")
-    convertidos, falhas = raw.converter_todos(raws, destino, avancar)
+    convertidos, falhas = raw.converter_todos(raws, destino, avancar, marca)
     return [convertidos.get(p, p) for p in transferidos], falhas
 
 
