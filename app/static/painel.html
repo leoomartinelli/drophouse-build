@@ -65,6 +65,11 @@ progress{-webkit-appearance:none;appearance:none;width:100%;height:8px;margin-to
 progress::-webkit-progress-bar{background:var(--card2)}progress::-webkit-progress-value{background:var(--lima);border-radius:999px}
 progress::-moz-progress-bar{background:var(--lima)}
 .vazio{color:var(--mut);margin:4px 0}
+.link-fotos{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 14px;margin:6px 0;border-radius:14px;
+ background:var(--card2);border:1px solid var(--bord);color:var(--txt);text-decoration:none;min-height:44px}
+.link-fotos:hover,.link-fotos:focus-visible{border-color:var(--lima)}
+.link-fotos .t{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere}
+.link-fotos .seta{color:var(--lima);font-size:1.2rem;flex:none}
 .pt{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mut);margin-right:8px;vertical-align:middle}
 .pt.concluido{background:var(--lima)}.pt.erro{background:var(--lar)}.pt.rodando{background:var(--lima);animation:vivo 1.6s ease-in-out infinite}
 /* quadro de envios ao Drive: o mesmo da tela do PC, juntando todos os PCs */
@@ -142,6 +147,9 @@ function desenha() {
    <div class="tile ${g.ja_descarregaram ? '' : 'zero'}"><b>${g.ja_descarregaram}/${g.voluntarios}</b><span>voluntários já descarregaram</span></div>
    <div class="tile ${g.pcs_ocupados ? '' : 'zero'}"><b>${g.pcs_ocupados}</b><span>PC(s) ocupado(s) agora</span></div>
    <div class="tile ${g.pcs_livres ? '' : 'zero'}"><b>${g.pcs_livres}/${g.pcs}</b><span>PC(s) livre(s)${g.pcs_offline ? ` · <span class="bad">${g.pcs_offline} sem resposta</span>` : ''}</span></div>
+  </div>
+  <div class="card"><h2>Link das fotos</h2>
+   ${(D.links || []).map(l => `<a class="link-fotos" href="${esc(l.link)}" target="_blank" rel="noopener noreferrer"><span class="t"><b>${esc(l.nome)}</b><span class="mini mut">Abrir no Google Drive</span></span><span class="seta" aria-hidden="true">↗</span></a>`).join('') || '<p class="vazio">Nenhum link do Drive cadastrado.</p>'}
   </div>
   ${(D.versoes_diferentes || []).length ? `<div class="card" style="border-color:var(--lar)"><b class="warn">PCs com versão diferente do líder (v${esc(D.versao_lider)}):</b> ${D.versoes_diferentes.map(esc).join(', ')}.<br><span class="mini mut">Instale a mesma versão em todos os PCs para que a numeração e as estatísticas fiquem certas.</span></div>` : ''}
   <div class="card"><h2>Descarregando agora</h2>

@@ -481,3 +481,46 @@ def test_cancelar_depois_da_ultima_foto_conta_como_concluida(monkeypatch):
         time.sleep(0.05)
     assert E.transfer["estado"] == "concluido", E.transfer
     assert os.path.exists(os.path.join(pasta, "DCIM", "100CANON", core.MARKER_NAME))
+
+
+# ---------- area "Link das fotos" do painel do lider (issue #27) ----------
+
+PASTA_1 = "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp?usp=sharing"
+PASTA_2 = "https://drive.google.com/drive/u/0/folders/2ZyXwVuTsRqPoNm"
+
+
+def servir_com_drive(pastas, nome="Culto Drive"):
+    r = local.post("/api/servir", json={"nome": f"{nome} {time.time_ns()}", "voluntarios": ["Ana"],
+                                        "drive_folders": pastas})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_link_das_fotos_vem_da_pasta_base():
+    servir_com_drive([{"link": PASTA_1, "nome": "Fotos do Culto"},
+                      # pasta de categoria criada sozinha dentro da base: nao e "pasta base"
+                      {"link": "https://drive.google.com/drive/folders/3CategoriaLouvor1", "nome": "Louvor", "auto": True}])
+    assert dados()["links"] == [{"nome": "Fotos do Culto",
+                                 "link": "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp"}]
+    pagina = celular.get("/painel").text
+    assert "Link das fotos" in pagina and 'target="_blank"' in pagina and "noopener" in pagina
+
+
+def test_trocar_o_link_da_pasta_base_atualiza_o_painel():
+    sv = servir_com_drive([{"link": PASTA_1, "nome": "Fotos do Culto"}])
+    r = local.put(f"/api/servir/{sv['id']}", json={**sv, "drive_folders": [{"link": PASTA_2, "nome": "Pasta nova"}]})
+    assert r.status_code == 200
+    assert dados()["links"] == [{"nome": "Pasta nova", "link": "https://drive.google.com/drive/folders/2ZyXwVuTsRqPoNm"}]
+
+
+def test_sem_link_do_drive_mostra_aviso():
+    servir_com_drive([])
+    assert dados()["links"] == []
+    assert "Nenhum link do Drive cadastrado" in celular.get("/painel").text
+
+
+def test_link_que_nao_e_pasta_do_drive_nao_vai_para_o_painel():
+    # o painel abre no celular de qualquer um na rede: so pasta do Drive, nunca "javascript:" ou texto solto
+    servir_com_drive([{"link": "javascript:alert(1)", "nome": "x"}, {"link": "minha pasta", "nome": "y"},
+                      {"link": PASTA_1, "nome": "Fotos"}, {"link": PASTA_1 + "&outra=1", "nome": "Repetida"}])
+    assert dados()["links"] == [{"nome": "Fotos", "link": "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp"}]
