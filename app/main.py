@@ -884,7 +884,7 @@ def index():
     """Entrega o index com ?v=<data do arquivo> nos CSS/JS: o navegador baixa de novo sempre que mudarem,
     sem precisar de Ctrl+F5 depois de uma atualizacao."""
     html = open(os.path.join(STATIC, "index.html"), encoding="utf-8").read()
-    for nome in ("style.css", "app.js"):
+    for nome in ("style.css", "selecao.js", "app.js"):
         v = int(os.path.getmtime(os.path.join(STATIC, nome)))
         html = html.replace(f"/static/{nome}", f"/static/{nome}?v={v}")
     return Response(html, media_type="text/html", headers={"Cache-Control": "no-cache"})

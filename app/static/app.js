@@ -88,7 +88,8 @@ function dialogo(bg, cancelar) {
 function modal(html, botoes, larga) {
   return new Promise(res => {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
-    bg.innerHTML = `<div class="modal ${larga ? 'larga' : ''}"><div class="mc">${html}</div><div class="btns"></div></div>`;
+    // 3 botoes ou mais: janela mais larga para caberem numa linha (e empilhados em tela estreita; ver .modal.tres)
+    bg.innerHTML = `<div class="modal ${larga ? 'larga' : ''} ${botoes.length >= 3 ? 'tres' : ''}"><div class="mc">${html}</div><div class="btns"></div></div>`;
     const btns = bg.querySelector('.btns');
     // opcao segura: "continuar" (null), senao "nao" (false), senao a unica resposta; recebe o foco e e o que o Esc escolhe
     const seguro = botoes.find(b => b.v === null) || botoes.find(b => b.v === false) || botoes[botoes.length - 1];
@@ -1637,33 +1638,72 @@ async function abrirRevisor() {
   if (!lista.length) return alerta('Aviso', 'Não há fotos na lista de transferência para revisar.');
   pararPoll();
   const v = Date.now();   // muda a cada abertura: a URL so tem o indice, entao sem isso o navegador reaproveita fotos de descarregamentos anteriores
+  // desc: marcadas para descarte (apagadas so no "Finalizar"); ordemDesc: cada descarte (uma foto ou um lote) para o Ctrl+Z
+  // sel/ancora: selecao de varias fotos na tira, como no explorador de arquivos (Shift, Ctrl, Ctrl+A; ver selecao.js)
   const desc = new Set(); const ordemDesc = []; let i = 0; let tempo = null;
+  let sel = new Set([0]), ancora = 0;
   const el = document.createElement('div'); el.className = 'rev';
   el.innerHTML = `<div class="bar"><button class="cinza" id="r-ant">${ic('ant')}Anterior</button><div class="info" id="r-info"></div><button class="cinza" id="r-prox">Próxima${ic('prox')}</button>
     <span class="zgrupo"><button class="cinza" id="r-zm" title="Diminuir zoom (−)">−</button><button class="cinza" id="r-zt" title="Alternar entre tela inteira e 100% (duplo clique na foto)">Tela inteira</button><button class="cinza" id="r-zp" title="Aumentar zoom (+)">+</button></span>
     <button class="verm" id="r-desc" title="Descartar (Del)">${ic('lixo')}Descartar</button><button class="cinza" id="r-undo" title="Desfazer (Ctrl+Z)">${ic('desfazer')}Desfazer</button><button class="verde" id="r-fim" title="Finalizar (Enter)">${ic('ok')}Finalizar seleção</button><button class="cinza so-ic" id="r-sair" title="Sair (Esc)" aria-label="Sair da seleção">${ic('x')}</button></div>
     <div class="stage" id="r-stage"><img id="r-img" alt=""><div class="stamp hidden" id="r-stamp">DESCARTADA</div></div>
-    <div class="strip" id="r-strip"></div><div class="kbd">← → navegar · Del/Backspace/X descartar · Ctrl+Z desfazer · Enter finalizar · Esc sair<br>Zoom: roda do mouse ou pinça · arrastar move · duplo clique ou 1 = 100% · + − · 0 = tela inteira</div>`;
+    <div class="strip" id="r-strip"></div><div class="kbd">← → navegar · Del/Backspace/X descartar · Ctrl+Z desfazer · Enter finalizar · Esc sair<br>Várias fotos: Shift + clique (ou Shift + ← →) seleciona o intervalo · Ctrl + clique soma ou tira · Ctrl+A todas · Esc limpa a seleção<br>Zoom: roda do mouse ou pinça · arrastar move · duplo clique ou 1 = 100% · + − · 0 = tela inteira</div>`;
   document.body.appendChild(el); document.body.classList.add('tela-cheia');   // o logo do topo para atras da selecao
   const $ = s => el.querySelector(s); const img = $('#r-img');
   const zoom = criarZoom($('#r-stage'), img, t => { $('#r-zt').textContent = t; });
   $('#r-strip').innerHTML = lista.map((n, k) => `<img data-k="${k}" title="${esc(n)}" loading="lazy" src="/api/revisor/imagem/${k}?lado=160&v=${v}">`).join('');
-  $('#r-strip').querySelectorAll('img').forEach(t => t.onclick = () => { i = +t.dataset.k; mostra(); });
+  $('#r-strip').querySelectorAll('img').forEach(t => t.onclick = e => {
+    const k = +t.dataset.k;
+    ({ sel, ancora } = Selecao.clique(sel, ancora, k, { shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey }));
+    i = k; mostra();
+  });
   // com zoom, as proximas ja vem no tamanho original (o zoom continua ao trocar de foto)
   function precarrega() { [i + 1, i - 1, i + 2, i - 2].forEach(k => { if (k >= 0 && k < lista.length) new Image().src = `/api/revisor/imagem/${k}?${zoom.precisaOriginal() && k === i + 1 ? 'lado=0&' : ''}v=${v}`; }); }
   function mostra() {
     const d = desc.has(i);
     zoom.foto(`/api/revisor/imagem/${i}?v=${v}`, `/api/revisor/imagem/${i}?lado=0&v=${v}`); $('#r-stage').classList.toggle('desc', d); $('#r-stamp').classList.toggle('hidden', !d);
     const rest = lista.length - desc.size;
-    $('#r-info').innerHTML = `<b>Foto ${i + 1}/${lista.length}</b> · ${esc(lista[i])}<br><span class="mini" style="color:#aaa">${desc.size} marcada(s) para descarte · ${rest} mantida(s)</span>`;
+    const varias = sel.size > 1;
+    // com varias selecionadas o contador entra no lugar do "mantidas" (a barra nao cresce); as dicas ficam no rodape
+    $('#r-info').innerHTML = `<b>Foto ${i + 1}/${lista.length}</b> · ${esc(lista[i])}<br>` + (varias
+      ? `<span class="r-sel" title="Del descarta as selecionadas · Esc limpa a seleção">${ic('ok')}${sel.size} selecionada(s)</span> <span class="mini" style="color:#aaa">· ${desc.size} para descarte</span>`
+      : `<span class="mini" style="color:#aaa">${desc.size} marcada(s) para descarte · ${rest} mantida(s)</span>`);
+    $('#r-desc').innerHTML = `${ic('lixo')}Descartar${varias ? ` (${sel.size})` : ''}`;
+    $('#r-desc').title = varias ? `Descartar as ${sel.size} selecionadas (Del)` : 'Descartar (Del)';
     $('#r-undo').disabled = !ordemDesc.length; $('#r-undo').title = ordemDesc.length ? 'Desfazer (Ctrl+Z)' : 'Nada para desfazer';
-    $('#r-strip').querySelectorAll('img').forEach(t => { const k = +t.dataset.k; t.classList.toggle('cur', k === i); t.classList.toggle('desc', desc.has(k)); });
+    $('#r-strip').querySelectorAll('img').forEach(t => {
+      const k = +t.dataset.k; t.classList.toggle('cur', k === i); t.classList.toggle('desc', desc.has(k));
+      t.classList.toggle('sel', varias && sel.has(k)); t.setAttribute('aria-selected', varias && sel.has(k) ? 'true' : 'false');
+    });
     const cur = $('#r-strip').querySelector('img.cur'); if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'center' });
     precarrega();
   }
-  const prox = () => { if (i < lista.length - 1) { i++; mostra(); } }, ant = () => { if (i > 0) { i--; mostra(); } };
-  function descartar() { if (!desc.has(i)) { desc.add(i); ordemDesc.push(i); } if (i < lista.length - 1) i++; mostra(); }
-  function desfazer() { if (!ordemDesc.length) return; const k = ordemDesc.pop(); desc.delete(k); i = k; mostra(); toast(`Desfeito: a foto ${k + 1} volta a ser mantida`); }
+  // andar com as setas volta para uma foto so; com Shift estende a selecao a partir da ancora (como no explorador)
+  const ir_ = (k, shift) => {
+    if (k < 0 || k >= lista.length) return;
+    ({ sel, ancora } = shift ? Selecao.clique(sel, ancora, k, { shift: true }) : { sel: new Set([k]), ancora: k });
+    i = k; mostra();
+  };
+  const prox = shift => ir_(i + 1, shift), ant = shift => ir_(i - 1, shift);
+  async function descartar() {
+    if (sel.size > 1) {                               // varias selecionadas: um lote so, com confirmacao
+      const lote = Selecao.aDescartar(sel, desc);
+      if (!lote.length) return toast('As fotos selecionadas já estão marcadas para descarte.');
+      if (!await confirmar('Descartar fotos', `Descartar ${lote.length} foto(s)?\n\nElas ficam marcadas e só são apagadas ao finalizar a seleção. Ctrl+Z desfaz.`, `Descartar ${lote.length} foto(s)`, 'Cancelar', true)) return;
+      lote.forEach(k => desc.add(k)); ordemDesc.push(lote);
+      const depois = Math.min(lista.length - 1, Math.max(...sel) + 1);
+      sel = new Set([depois]); ancora = depois; i = depois; mostra();
+      return toast(`${lote.length} foto(s) marcadas para descarte`);
+    }
+    if (!desc.has(i)) { desc.add(i); ordemDesc.push([i]); }
+    ir_(Math.min(i + 1, lista.length - 1));
+  }
+  function desfazer() {
+    if (!ordemDesc.length) return;
+    const lote = ordemDesc.pop(); lote.forEach(k => desc.delete(k));
+    sel = new Set(lote.length > 1 ? lote : [lote[0]]); ancora = lote[0]; i = lote[0]; mostra();
+    toast(lote.length > 1 ? `Desfeito: ${lote.length} fotos voltam a ser mantidas` : `Desfeito: a foto ${lote[0] + 1} volta a ser mantida`);
+  }
   async function fechar() { document.removeEventListener('keydown', tecla); zoom.destruir(); el.remove(); document.body.classList.remove('tela-cheia'); await render(); }
   async function finalizar() {
     let msg = 'Revisão terminada! Nenhuma foto foi apagada.';
@@ -1687,16 +1727,21 @@ async function abrirRevisor() {
   }
   function tecla(e) {
     if (document.querySelector('.modal-bg')) return;
-    if (e.key === 'ArrowRight') prox(); else if (e.key === 'ArrowLeft') ant();
-    else if (['Delete', 'Backspace', 'x', 'X'].includes(e.key)) { e.preventDefault(); descartar(); }
-    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); desfazer(); }
-    else if (e.key === 'Enter') finalizar(); else if (e.key === 'Escape') sair();
-    else if (e.key === '?') alerta('Atalhos da seleção', '← →  foto anterior / próxima\nDel, Backspace ou X  descartar\nCtrl+Z  desfazer\nEnter  finalizar\nEsc  sair\n+ −  zoom · 0 tela inteira · 1 ou duplo clique 100%');
+    const alvo = e.target;                              // digitando num campo de texto: nenhum atalho dispara
+    if (alvo && (alvo.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName))) return;
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (e.key === 'ArrowRight') prox(e.shiftKey); else if (e.key === 'ArrowLeft') ant(e.shiftKey);
+    else if (['Delete', 'Backspace', 'x', 'X'].includes(e.key) && !ctrl) { e.preventDefault(); descartar(); }
+    else if (ctrl && e.key.toLowerCase() === 'z') { e.preventDefault(); desfazer(); }
+    else if (ctrl && e.key.toLowerCase() === 'a') { e.preventDefault(); sel = Selecao.tudo(lista.length); ancora = 0; mostra(); }
+    else if (e.key === 'Enter') finalizar();
+    else if (e.key === 'Escape') { if (sel.size > 1) { sel = new Set([i]); ancora = i; mostra(); } else sair(); }
+    else if (e.key === '?') alerta('Atalhos da seleção', '← →  foto anterior / próxima\nDel, Backspace ou X  descartar (as selecionadas, se houver várias)\nShift + clique ou Shift + ← →  selecionar o intervalo\nCtrl + clique  somar ou tirar da seleção\nCtrl+A  selecionar todas\nCtrl+Z  desfazer\nEnter  finalizar\nEsc  limpar a seleção / sair\n+ −  zoom · 0 tela inteira · 1 ou duplo clique 100%');
     else if (e.key === '+' || e.key === '=') zoom.mais(); else if (e.key === '-' || e.key === '_') zoom.menos();
     else if (e.key === '0') zoom.ajustar(); else if (e.key === '1') zoom.cem();
   }
   document.addEventListener('keydown', tecla);
-  $('#r-ant').onclick = ant; $('#r-prox').onclick = prox; $('#r-desc').onclick = descartar; $('#r-undo').onclick = desfazer;
+  $('#r-ant').onclick = () => ant(); $('#r-prox').onclick = () => prox(); $('#r-desc').onclick = descartar; $('#r-undo').onclick = desfazer;
   $('#r-fim').onclick = finalizar; $('#r-sair').onclick = sair;
   $('#r-zm').onclick = zoom.menos; $('#r-zp').onclick = zoom.mais; $('#r-zt').onclick = zoom.alternar;
   mostra();

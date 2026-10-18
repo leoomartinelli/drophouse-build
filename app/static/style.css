@@ -202,6 +202,11 @@ progress::-moz-progress-bar{background:var(--lima);border-radius:999px}
 .modal.larga{max-width:700px;white-space:normal}
 .modal h2{font-size:1.3rem;margin-bottom:.7rem}
 .modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
+/* 3 botoes (ex.: "Sair da selecao"): cabem numa linha; em tela estreita empilham na largura toda, a acao principal
+   (a ultima) em cima, em vez de sobrar um botao sozinho e torto na linha de baixo */
+.modal.tres{max-width:680px}
+.modal.tres .btns{flex-wrap:nowrap}
+@media(max-width:700px){.modal.tres .btns{flex-direction:column-reverse;align-items:stretch}.modal.tres .btns button{width:100%}}
 /* botao sem classe na janela = a resposta principal (OK, Sim): lime */
 .modal .btns button:not([class]){background:var(--lima);border-color:var(--lima);color:var(--lima-ink)}
 .modal .btns button:not([class]):hover{background:var(--lima2);border-color:var(--lima2)}
@@ -308,6 +313,12 @@ input[type=checkbox]:checked:disabled{opacity:.45}
 .rev .strip img:hover{opacity:.9}
 .rev .strip img.cur{border-color:var(--lima);opacity:1}
 .rev .strip img.desc{border-color:var(--verm);opacity:.22}
+/* varias selecionadas (Shift, Ctrl, Ctrl+A): contorno lime por fora; descartada continua com a borda vermelha */
+.rev .strip{user-select:none;-webkit-user-select:none}
+.rev .strip img.sel{opacity:1;outline:3px solid var(--lima);outline-offset:2px}
+.rev .strip img.sel.desc{opacity:.5}
+.rev .r-sel{display:inline-flex;align-items:center;gap:5px;color:var(--lima);font-weight:600;font-size:.85rem;white-space:nowrap}
+.rev .r-sel .ic{width:14px;height:14px}
 .rev .stage.desc img{opacity:.3;filter:grayscale(1)}
 .rev .stamp{position:absolute;z-index:2;top:30px;right:34px;background:var(--verm);color:var(--lima-ink);padding:6px 16px;border-radius:var(--pill);font-family:var(--f-titulo);font-weight:var(--p-titulo);font-size:1.1rem;letter-spacing:.08em;
  animation:carimbo .4s var(--sai)}
