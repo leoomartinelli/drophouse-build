@@ -380,14 +380,15 @@ def previa_origem(d: dict = Body(...)):
 
 
 @app.get("/api/origem/miniatura")
-def miniatura_origem(caminho: str):
-    """Miniatura de uma foto do cartao (exemplo de cada dia quando o cartao tem fotos de datas diferentes).
-    So serve fotos de dentro do cartao/origem: o caminho e relativo a ele."""
+def miniatura_origem(caminho: str, lado: int = 160):
+    """Miniatura de uma foto do cartao (exemplo de cada dia, ou o quadradinho do mascote na copia).
+    So serve fotos de dentro do cartao/origem: o caminho e relativo a ele. lado fica entre 64 e 400."""
     alvo = transfer.miniatura_do_cartao(caminho)
     if not alvo:
         erro("Foto não encontrada no cartão.", 404)
+    lado = max(64, min(lado, 400))
     try:
-        return Response(review.renderizar(alvo, 160), media_type="image/jpeg", headers={"Cache-Control": "private, max-age=600"})
+        return Response(review.renderizar(alvo, lado), media_type="image/jpeg", headers={"Cache-Control": "private, max-age=600"})
     except Exception as e:
         erro(f"Erro ao carregar a miniatura: {e}", 500)
 

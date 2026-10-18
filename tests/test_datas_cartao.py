@@ -1,5 +1,6 @@
 """Cartao com fotos de dias diferentes (issue #29): agrupar por dia e descarregar so os dias escolhidos.
 Rodar: .venv/bin/python -m pytest tests -q"""
+import io
 import os
 import time
 
@@ -70,6 +71,8 @@ def test_varios_dias_lista_cada_dia_com_quantidade_e_exemplo():
     for d in dias:                                       # cada dia traz a miniatura de uma foto dele
         r = local.get("/api/origem/miniatura", params={"caminho": d["exemplo"]})
         assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+        pequena = local.get("/api/origem/miniatura", params={"caminho": d["exemplo"], "lado": 96})
+        assert pequena.status_code == 200 and max(Image.open(io.BytesIO(pequena.content)).size) <= 96
 
 
 def test_foto_sem_exif_usa_a_data_do_arquivo():

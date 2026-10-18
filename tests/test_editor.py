@@ -495,6 +495,7 @@ def test_loading_do_preset_bloqueia_o_drive_ate_terminar(monkeypatch, tmp_path):
     assert r.status_code == 200
     p = _status()["preset"]                           # a tela abre o loading com o progresso
     assert p["rodando"] and p["nome"] == "Lareira" and p["total"] == 3 and p["feitos"] < 3 and p["erros"] == 0
+    assert p["pronta"] is None                       # nenhuma foto terminou: a tela ainda nao pede miniatura
     r = local.post("/api/upload/iniciar", json={"link": ""})   # durante o loading o Drive fica bloqueado
     assert r.status_code == 400 and "salvando" in r.json()["detail"]
 
@@ -503,7 +504,7 @@ def test_loading_do_preset_bloqueia_o_drive_ate_terminar(monkeypatch, tmp_path):
         if not _status()["preset"]["rodando"]:
             break
         time.sleep(0.05)
-    assert _status()["preset"] == {"nome": "Lareira", "total": 3, "feitos": 3, "erros": 0, "rodando": False}
+    assert _status()["preset"] == {"nome": "Lareira", "total": 3, "feitos": 3, "erros": 0, "rodando": False, "pronta": 2}
     assert local.post("/api/upload/iniciar", json={"link": ""}).status_code == 200   # terminou: o Drive libera
     local.post("/api/transferencia/nova", json={})
     assert _status()["preset"] is None                # o lote terminado nao aparece no proximo descarregamento

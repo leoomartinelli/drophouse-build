@@ -630,6 +630,12 @@ def _trabalhar():
                 if foto not in _ultimo:
                     SALVANDO.pop(foto, None)
                 SALVANDO.pop(nova, None)
+                # a tela pede a miniatura desta foto (uma por vez); erro de salvamento nao troca o quadradinho
+                if LOTE and foto not in SALVANDO and nova not in SALVANDO:
+                    try:
+                        LOTE["pronta"] = E.arquivos_transferidos.index(nova)
+                    except ValueError:
+                        pass
         except Exception as e:
             print(f"Erro ao salvar edição de {os.path.basename(foto)}: {e}")
             SALVANDO[foto] = f"erro: {e}"
@@ -645,14 +651,17 @@ LOTE = {}
 
 
 def situacao_lote():
-    """{"nome", "total", "feitos", "erros", "rodando"} do ultimo lote; None se nenhum foi aplicado."""
+    """{"nome", "total", "feitos", "erros", "rodando", "pronta"} do ultimo lote; None se nenhum foi aplicado.
+    pronta: indice da ultima foto que terminou de salvar (a tela pede so a miniatura dela); None se nenhuma."""
     with _lock_fila:
         if not LOTE:
             return None
-        estados = [SALVANDO.get(_atual(f), "") for f in LOTE["fotos"]]
+        fotos, nome, total, pronta = LOTE["fotos"], LOTE["nome"], LOTE["total"], LOTE.get("pronta")
+        estados = [SALVANDO.get(_atual(f), "") for f in fotos]
     faltam = sum(1 for e in estados if e == "salvando")
-    return {"nome": LOTE["nome"], "total": LOTE["total"], "feitos": LOTE["total"] - faltam,
-            "erros": sum(1 for e in estados if e.startswith("erro")), "rodando": faltam > 0}
+    return {"nome": nome, "total": total, "feitos": total - faltam,
+            "erros": sum(1 for e in estados if e.startswith("erro")), "rodando": faltam > 0,
+            "pronta": pronta}
 
 
 def situacao():
