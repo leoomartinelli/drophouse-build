@@ -164,6 +164,24 @@ function mascote(estado, tam = 72) {
   // os olhos sao <i> de HTML por cima do desenho: olhar e piscar tambem so compoem
   return `<span class="mascote m-${estado}" style="--m:${tam}px" aria-hidden="true"><i class="m-foto"></i><i class="m-foto"></i><i class="m-foto"></i><span class="m-corpo"><svg viewBox="6 18 760 760">${MASCOTE_CAIXA}</svg><span class="m-olhos"><i class="m-olho"></i><i class="m-olho"></i></span></span></span>`;
 }
+// poe a miniatura no proximo quadradinho. No maximo uma troca por segundo, e so esta URL (nunca a lista inteira).
+// Sem imagem (ainda nao pronta, ou erro ao carregar), o quadradinho continua liso.
+function miniaturaNoMascote(el, url) {
+  if (!el || !url) return;
+  const agora = Date.now();
+  if (el._miniEm && agora - el._miniEm < 1000) return;
+  if (url === el._miniUrl) return;
+  el._miniEm = agora;
+  el._miniUrl = url;
+  const fotos = el.querySelectorAll('.m-foto');
+  if (!fotos.length) return;
+  const slot = fotos[el._miniN = ((el._miniN || 0) + 1) % fotos.length];
+  const img = new Image();
+  img.onload = () => { if (slot.isConnected) slot.style.backgroundImage = `url("${url.replace(/["\\]/g, '')}")`; };
+  img.onerror = () => { if (slot.isConnected) slot.style.backgroundImage = ''; };
+  img.src = url;
+}
+
 // troca o estado sem recriar o no (o poll so mexe na classe)
 function mascoteEstado(el, estado, umaVez) {
   if (!el) return;
@@ -864,6 +882,7 @@ async function vDescarregar() {
       q('#pg-t').textContent = t.fase === 'convertendo' ? `Convertendo RAW para JPEG · ${fmtNum(t.feitos)} de ${fmtNum(t.total)}`
         : `${fmtNum(t.feitos)} de ${fmtNum(t.total)} fotos${t.bytes_total ? ` · ${fmtBytes(t.bytes_feitos)} de ${fmtBytes(t.bytes_total)}` : ''}${resta}`;
       q('#pg-arq').textContent = t.atual || '';
+      if (t.mini && t.fase !== 'convertendo') miniaturaNoMascote(q('.copiando .mascote'), `/api/origem/miniatura?lado=96&caminho=${encodeURIComponent(t.mini)}`);
       document.title = `${pct}% · DropHouse`;
       if (t.fase === 'convertendo') q('#b-cancelar').classList.add('hidden');
       if (t.estado === 'concluido' || t.estado === 'erro' || t.estado === 'cancelado') {
@@ -1004,6 +1023,7 @@ function telaPreset(p) {
   bg.querySelector('#cp-titulo').textContent = p.nome ? `Aplicando o preset "${p.nome}"` : 'Salvando as fotos editadas';
   bg.querySelector('#cp-barra').value = p.total ? p.feitos / p.total : 0;
   bg.querySelector('#cp-num').textContent = `${fmtNum(p.feitos)} de ${fmtNum(p.total)} fotos`;
+  if (Number.isInteger(p.pronta)) miniaturaNoMascote(bg.querySelector('.mascote'), `/api/revisor/imagem/${p.pronta}?lado=96`);
   return true;
 }
 

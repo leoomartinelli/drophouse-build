@@ -303,6 +303,20 @@ def dias(arquivos, info=None):
     return [por_dia[d] for d in sorted(por_dia)]
 
 
+def _relativo_do_cartao(origem):
+    """Caminho da foto relativo a origem; vazio se estiver fora dela."""
+    raiz = os.path.realpath(E.drive_path or "")
+    if not raiz or not origem:
+        return ""
+    alvo = os.path.realpath(origem)
+    try:
+        if os.path.commonpath([raiz, alvo]) != raiz:
+            return ""
+    except ValueError:
+        return ""
+    return os.path.relpath(alvo, raiz)
+
+
 def miniatura_do_cartao(relativo):
     """Caminho de uma foto do cartao para a miniatura de exemplo; None se estiver fora do cartao ou nao for foto."""
     if not E.drive_path or not relativo:
@@ -458,6 +472,8 @@ def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False, t
                 return
             nome_orig = os.path.basename(origem)
             E.transfer["atual"] = nome_orig
+            # caminho relativo no cartao: a tela pede uma miniatura pequena desta foto (no maximo uma por segundo)
+            E.transfer["mini"] = _relativo_do_cartao(origem) if origem.lower().endswith(core.EXT_IMG) else ""
             ext = os.path.splitext(nome_orig)[1].lower()
             novo = f"{fotografo}_{idx + inicio:0{digitos}d}{ext}"
             alvo = os.path.join(destino, novo)
@@ -486,7 +502,7 @@ def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False, t
         if pulados[0]:
             # sem marcador nem historico: as copias terminaram fora de ordem, entao o proximo descarregamento
             # precisa olhar o cartao inteiro de novo. O que ja foi copiado fica na pasta.
-            E.transfer.update(estado="cancelado", atual="",
+            E.transfer.update(estado="cancelado", atual="", mini="",
                               msg=f"Cópia cancelada: {len(copiados)} de {total} arquivo(s) já estavam copiados e ficaram na pasta.")
             painel.liberar()
             return
@@ -510,12 +526,12 @@ def _copiar(fotografo, destino, base_fotografo, arquivos, converter_raw=False, t
         msg = f"{len(copiados)} arquivo(s) copiados" + (f", {falhas} com erro (veja o log)" if falhas else "")
         if falhas_raw:
             msg += f" · {len(falhas_raw)} RAW não convertido(s), ficaram em RAW (veja o log)"
-        E.transfer.update(estado="concluido", progresso=1, msg=msg,
+        E.transfer.update(estado="concluido", progresso=1, mini="", msg=msg,
                           revisaveis=len(transferidos), falhas=falhas, falhas_raw=len(falhas_raw))
         painel.concluido()
         stats.atualizar_voluntarios_em_segundo_plano()
     except Exception as e:
-        E.transfer.update(estado="erro", msg=str(e))
+        E.transfer.update(estado="erro", mini="", msg=str(e))
         painel.erro_copia()
 
 
@@ -528,7 +544,7 @@ def _converter_raws(destino, transferidos, marca=None):
     def avancar(feitos, total):
         E.transfer.update(feitos=feitos, total=total, progresso=feitos / total)
 
-    E.transfer.update(fase="convertendo", feitos=0, total=len(raws), progresso=0,
+    E.transfer.update(fase="convertendo", feitos=0, total=len(raws), progresso=0, mini="",
                       msg="Convertendo RAW para JPEG...")
     convertidos, falhas = raw.converter_todos(raws, destino, avancar, marca)
     return [convertidos.get(p, p) for p in transferidos], falhas
