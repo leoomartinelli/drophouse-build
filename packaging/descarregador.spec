@@ -44,7 +44,7 @@ a.datas = [d for d in a.datas if "discovery_cache" not in d[0].replace("\\", "/"
            or os.path.basename(d[0]) in ("drive.v3.json", "__init__.py")]
 pyz = PYZ(a.pure)
 
-icone = os.path.join(RAIZ, "housinho.ico" if sys.platform == "win32" else "housinho.png")
+icone = os.path.join(RAIZ, "drophouse.ico" if sys.platform == "win32" else "drophouse.png")
 exe = EXE(
     pyz, a.scripts, [],
     exclude_binaries=True,
@@ -58,11 +58,16 @@ coll = COLLECT(exe, a.binaries, a.datas, name=NOME)
 if sys.platform == "darwin":
     app = BUNDLE(
         coll,
+        # o nome da pasta do app (e o executavel dentro dela) ficam: os Macs ja instalados se atualizam procurando
+        # este caminho. O nome que aparece no menu e no Finder vem de CFBundleName/CFBundleDisplayName.
         name="Descarregador de Fotos.app",
         icon=icone,
         bundle_identifier="br.com.crescer.descarregadorfotos",
         version=VERSAO,
         info_plist={
+            "CFBundleName": "DropHouse",
+            "CFBundleDisplayName": "DropHouse",
+            "NSHumanReadableCopyright": "DropHouse · House de Criatividade",
             "CFBundleShortVersionString": VERSAO,
             "CFBundleVersion": VERSAO,
             "LSUIElement": True,           # sem icone no Dock: a interface e o navegador ("Encerrar" fecha)

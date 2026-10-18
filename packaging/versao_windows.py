@@ -11,12 +11,13 @@ with open(os.path.join(AQUI, "versao_windows.txt"), "w", encoding="utf-8") as f:
                     date=(0, 0)),
   kids=[
     StringFileInfo([StringTable('041604B0', [
-      StringStruct('CompanyName', 'Sistemas Educacionais Crescer'),
-      StringStruct('FileDescription', 'Descarregador de Fotos'),
+      StringStruct('CompanyName', 'House de Criatividade'),
+      StringStruct('FileDescription', 'DropHouse'),
       StringStruct('FileVersion', '{versao}'),
       StringStruct('InternalName', 'DescarregadorDeFotos'),
       StringStruct('OriginalFilename', 'DescarregadorDeFotos.exe'),
-      StringStruct('ProductName', 'Descarregador de Fotos'),
+      StringStruct('ProductName', 'DropHouse'),
+      StringStruct('LegalCopyright', 'DropHouse · House de Criatividade'),
       StringStruct('ProductVersion', '{versao}')])]),
     VarFileInfo([VarStruct('Translation', [0x0416, 1200])])
   ]

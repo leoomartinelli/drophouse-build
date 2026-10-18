@@ -17,13 +17,14 @@ ln -s "/opt/$PKG/DescarregadorDeFotos" "$STAGE/usr/bin/$PKG"
 python3 - "$STAGE/usr/share/icons/hicolor/256x256/apps/$PKG.png" <<'EOF'
 import sys
 from PIL import Image
-Image.open("housinho.png").convert("RGBA").resize((256, 256), Image.LANCZOS).save(sys.argv[1])
+Image.open("drophouse.png").convert("RGBA").resize((256, 256), Image.LANCZOS).save(sys.argv[1])
 EOF
 cat > "$STAGE/usr/share/applications/$PKG.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Descarregador de Fotos
-Comment=Descarregar as fotos do cartão, selecionar e enviar ao Google Drive
+Name=DropHouse
+GenericName=Descarregador de Fotos
+Comment=Descarregar as fotos do cartão, selecionar e enviar ao Google Drive (House de Criatividade)
 Exec=/usr/bin/$PKG
 Icon=$PKG
 Terminal=false
@@ -34,12 +35,12 @@ cat > "$STAGE/DEBIAN/control" <<EOF
 Package: $PKG
 Version: $VERSAO
 Architecture: $ARQ
-Maintainer: Leonardo Martinelli <leoomartinelli@users.noreply.github.com>
+Maintainer: House de Criatividade <leoomartinelli@users.noreply.github.com>
 Section: graphics
 Priority: optional
 Depends: xdg-utils
 Homepage: https://github.com/leoomartinelli/descarregar-foto-web
-Description: Descarregador de Fotos do Ministério
+Description: DropHouse - descarregador de fotos da House de Criatividade
  Descarrega as fotos do cartão de memória, permite selecionar as melhores e enviar
  ao Google Drive. Vários computadores trabalham juntos na rede local (Líder/Auxiliar)
  e o painel de acompanhamento abre no celular pelo QR code.
@@ -76,20 +77,21 @@ EOF
 echo "/etc/ufw/applications.d/$PKG" > "$STAGE/DEBIAN/conffiles"
 chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm"
 chmod -R u+rwX,go+rX,go-w "$STAGE/opt" "$STAGE/usr" "$STAGE/etc"
-dpkg-deb --root-owner-group --build "$STAGE" "saida/DescarregadorDeFotos-$VERSAO-linux-$ARQ.deb"
+dpkg-deb --root-owner-group --build "$STAGE" "saida/DropHouse-$VERSAO-linux-$ARQ.deb"
 
 # --- .tar.gz portatil (qualquer distribuicao: extrair e clicar em DescarregadorDeFotos) ---
+# a pasta de dentro continua DescarregadorDeFotos-<versao>: o atualizador dos PCs ja instalados procura esse nome
 PORT="$STAGE/port/DescarregadorDeFotos-$VERSAO"
 mkdir -p "$PORT"
 cp -a dist/DescarregadorDeFotos/. "$PORT/"
 cp "$STAGE/usr/share/icons/hicolor/256x256/apps/$PKG.png" "$PORT/icone.png"
 cat > "$PORT/criar-atalho.sh" <<'EOF'
 #!/usr/bin/env bash
-# Cria o icone do Descarregador de Fotos no menu de aplicativos (e na Area de Trabalho, se existir).
+# Cria o icone do DropHouse no menu de aplicativos (e na Area de Trabalho, se existir).
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ATALHO="[Desktop Entry]
 Type=Application
-Name=Descarregador de Fotos
+Name=DropHouse
 Exec=\"$DIR/DescarregadorDeFotos\"
 Icon=$DIR/icone.png
 Terminal=false
@@ -102,9 +104,9 @@ if [ -d "$DESK" ]; then
   chmod +x "$DESK/descarregador-de-fotos.desktop"
   gio set "$DESK/descarregador-de-fotos.desktop" metadata::trusted true 2>/dev/null || true
 fi
-echo "Atalho criado. Procure 'Descarregador de Fotos' no menu."
+echo "Atalho criado. Procure 'DropHouse' no menu."
 EOF
 chmod +x "$PORT/criar-atalho.sh" "$PORT/DescarregadorDeFotos"
-tar -C "$STAGE/port" -czf "saida/DescarregadorDeFotos-$VERSAO-linux-$ARQ.tar.gz" "DescarregadorDeFotos-$VERSAO"
+tar -C "$STAGE/port" -czf "saida/DropHouse-$VERSAO-linux-$ARQ.tar.gz" "DescarregadorDeFotos-$VERSAO"
 rm -rf "$STAGE"
 ls -lh saida/

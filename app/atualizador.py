@@ -209,7 +209,7 @@ rm -rf "$TMP"
 BIN="$DIR/{os.path.basename(exe)}"
 """
     return f"""#!/bin/sh
-# gerado pelo Descarregador de Fotos para se atualizar
+# gerado pelo DropHouse para se atualizar
 # espera este programa fechar (processo "zumbi" ja fechou; no maximo 60 s)
 for i in $(seq 120); do
   ESTADO="$(ps -o stat= -p {os.getpid()} 2>/dev/null)"

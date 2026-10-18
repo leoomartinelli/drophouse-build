@@ -1,4 +1,4 @@
-# Compila o Descarregador de Fotos para Windows, macOS (Apple Silicon e Intel) e Linux, testa cada programa
+# Compila o DropHouse para Windows, macOS (Apple Silicon e Intel) e Linux, testa cada programa
 # compilado (autoteste, rede Líder/Auxiliar, instalação e atualização automática) e publica a versão.
 #
 # Só roda pelo botão "Run workflow" (Actions → Compilar), para não gastar os minutos de Actions da organização a
@@ -157,7 +157,7 @@ jobs:
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
           & $iscc "/DVersao=$env:VERSAO" packaging\windows\instalador.iss
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          Compress-Archive -Path dist\DescarregadorDeFotos -DestinationPath "saida\DescarregadorDeFotos-$env:VERSAO-windows-portatil.zip"
+          Compress-Archive -Path dist\DescarregadorDeFotos -DestinationPath "saida\DropHouse-$env:VERSAO-windows-portatil.zip"
           Get-ChildItem saida
       - name: Pacotes .deb e .tar.gz (Linux)
         if: runner.os == 'Linux'
@@ -175,7 +175,7 @@ jobs:
           Start-Process -FilePath $setup.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait
           $exe = "$env:LOCALAPPDATA\Programs\Descarregador de Fotos\DescarregadorDeFotos.exe"
           if (-not (Test-Path $exe)) { Write-Error "programa não instalado"; exit 1 }
-          $atalho = Join-Path ([Environment]::GetFolderPath('Desktop')) "Descarregador de Fotos.lnk"
+          $atalho = Join-Path ([Environment]::GetFolderPath('Desktop')) "DropHouse.lnk"
           if (-not (Test-Path $atalho)) { Write-Error "sem ícone na Área de Trabalho"; exit 1 }
           netsh advfirewall firewall show rule name="Descarregador de Fotos - $env:USERNAME"
           if ($LASTEXITCODE -ne 0) { Write-Error "regra do firewall não criada"; exit 1 }
@@ -222,7 +222,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: DescarregadorDeFotos-${{ env.VERSAO }}-${{ matrix.nome }}
+          name: DropHouse-${{ env.VERSAO }}-${{ matrix.nome }}
           path: saida/*
           if-no-files-found: error
 
@@ -252,14 +252,14 @@ jobs:
             echo "## Como instalar"
             echo "| Sistema | Baixe | Depois |"
             echo "|---|---|---|"
-            echo "| **Windows** 10/11 | \`DescarregadorDeFotos-$VERSAO-windows-instalador.exe\` | Abra e avance. O ícone aparece na Área de Trabalho. |"
-            echo "| **Mac** com chip Apple (M1, M2…) | \`DescarregadorDeFotos-$VERSAO-macos-apple-silicon.dmg\` | Abra e arraste para Aplicativos. Veja a observação abaixo. |"
-            echo "| **Mac** com Intel | \`DescarregadorDeFotos-$VERSAO-macos-intel.dmg\` | Igual ao de cima. |"
-            echo "| **Linux** (Ubuntu, Mint, Debian) | \`DescarregadorDeFotos-$VERSAO-linux-amd64.deb\` | Dê dois cliques e instale. O ícone aparece no menu. |"
+            echo "| **Windows** 10/11 | \`DropHouse-$VERSAO-windows-instalador.exe\` | Abra e avance. O ícone aparece na Área de Trabalho. |"
+            echo "| **Mac** com chip Apple (M1, M2…) | \`DropHouse-$VERSAO-macos-apple-silicon.dmg\` | Abra e arraste para Aplicativos. Veja a observação abaixo. |"
+            echo "| **Mac** com Intel | \`DropHouse-$VERSAO-macos-intel.dmg\` | Igual ao de cima. |"
+            echo "| **Linux** (Ubuntu, Mint, Debian) | \`DropHouse-$VERSAO-linux-amd64.deb\` | Dê dois cliques e instale. O ícone aparece no menu. |"
             echo
             echo "**Só precisa instalar uma vez:** depois o programa se atualiza sozinho quando o PC estiver livre."
             echo
-            echo "**Mac, na primeira vez:** o macOS avisa que não pode verificar o desenvolvedor. Abra *Ajustes do Sistema → Privacidade e Segurança*, desça até o aviso do Descarregador de Fotos e clique em **Abrir Mesmo Assim**. Também permita o acesso à rede local quando ele perguntar."
+            echo "**Mac, na primeira vez:** o macOS avisa que não pode verificar o desenvolvedor. Abra *Ajustes do Sistema → Privacidade e Segurança*, desça até o aviso do DropHouse (\"Descarregador de Fotos\") e clique em **Abrir Mesmo Assim**. Também permita o acesso à rede local quando ele perguntar."
             echo
             echo "**Windows:** se aparecer \"O Windows protegeu o computador\", clique em *Mais informações → Executar assim mesmo*."
             echo
@@ -272,4 +272,4 @@ jobs:
           cat notas.md
       - name: Publicar
         run: |
-          gh release create "v$VERSAO" saida/* --target "$GITHUB_SHA" --title "Descarregador de Fotos v$VERSAO" --notes-file notas.md
+          gh release create "v$VERSAO" saida/* --target "$GITHUB_SHA" --title "DropHouse v$VERSAO" --notes-file notas.md

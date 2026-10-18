@@ -41,7 +41,7 @@ O DropHouse leva as fotos do cartão SD até o Google Drive da igreja, organizad
 - Finalizar o Servir envia os dados a um webhook.
 - Existe hoje um editor de fotos embutido (Luz, Curva, Cor, corte) com o motor LightCraft. **Em aberto:** se ele continua no DropHouse ou migra para o futuro sistema de edição.
 - Interface em JavaScript puro, sem build; o PyInstaller empacota a pasta `app/static` como está.
-- Nomes: o produto se chama **DropHouse** (antes LightHouse). "Descarregador de Fotos" continua nos instaladores, na pasta de dados (`~/Descarregador de Fotos`) e na atualização automática; trocar esses nomes quebra caminhos e exige decisão própria.
+- Nomes: o produto se chama **DropHouse**, com autoria da House de Criatividade. Instalador, atalhos, ícones e telas usam esse nome. Continuam com o nome antigo, de propósito, a pasta de instalação, o executável (`DescarregadorDeFotos`), o pacote Linux (`descarregador-de-fotos`), a pasta `Descarregador de Fotos.app` no Mac, a pasta de dados (`~/Descarregador de Fotos`) e o repositório de releases — os PCs já instalados dependem desses caminhos para se atualizar.
 
 ## Brand Commitments
 
@@ -51,7 +51,7 @@ O DropHouse leva as fotos do cartão SD até o Google Drive da igreja, organizad
 
 ## Evidence on Hand
 
-- Manual da marca da House (PDF e imagens enviados pelo time), mascote "Housinho" em `app/static/housinho.png`.
+- Manual da marca da House (PDF e imagens enviados pelo time), logo e mascote do DropHouse (a caixa) em `app/static/logo.svg` e `app/static/icone.png`.
 - Não há depoimentos, métricas de uso nem estudos com usuários. Não inventar.
 
 ## Product Principles

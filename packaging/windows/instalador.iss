@@ -4,12 +4,15 @@
 ; libera o programa no Firewall do Windows (rede local Lider/Auxiliar e painel no celular).
 ; Sem precisar de administrador para instalar, o programa se ATUALIZA SOZINHO (app/atualizador.py roda este
 ; instalador em silencio com /REABRIR=1). So a regra do firewall pede administrador, uma unica vez: o caminho do
-; programa nao muda entre versoes. Os dados ficam em %USERPROFILE%\Descarregador de Fotos.
+; programa nao muda entre versoes. Os dados ficam em %USERPROFILE%\Descarregador de Fotos (nome antigo, de proposito).
 
 #ifndef Versao
   #error Informe a versao: iscc /DVersao=X.Y.Z
 #endif
-#define Nome "Descarregador de Fotos"
+; Nome: o que o usuario ve (instalador, atalhos, "Programas instalados"). Pasta e Exe ficam com o nome antigo: os PCs
+; ja instalados se atualizam com o codigo antigo, que reabre este caminho; a pasta de dados tambem nao muda.
+#define Nome "DropHouse"
+#define Pasta "Descarregador de Fotos"
 #define Exe "DescarregadorDeFotos.exe"
 ; uma regra por usuario do Windows: cada um instala na propria pasta
 #define Regra "Descarregador de Fotos - {username}"
@@ -22,19 +25,22 @@ AppName={#Nome}
 AppVersion={#Versao}
 AppVerName={#Nome} {#Versao}
 VersionInfoVersion={#Versao}
-AppPublisher=Sistemas Educacionais Crescer
+AppPublisher=House de Criatividade
+AppCopyright=DropHouse - House de Criatividade
+VersionInfoCompany=House de Criatividade
+VersionInfoProductName=DropHouse
 AppPublisherURL=https://github.com/leoomartinelli/descarregar-foto-web
 AppUpdatesURL=https://github.com/leoomartinelli/descarregar-foto-web/releases
-DefaultDirName={autopf}\{#Nome}
+DefaultDirName={autopf}\{#Pasta}
 DefaultGroupName={#Nome}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile={#Raiz}\housinho.ico
+SetupIconFile={#Raiz}\drophouse.ico
 UninstallDisplayIcon={app}\{#Exe}
 OutputDir={#Raiz}\saida
-OutputBaseFilename=DescarregadorDeFotos-{#Versao}-windows-instalador
+OutputBaseFilename=DropHouse-{#Versao}-windows-instalador
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -49,11 +55,15 @@ Source: "{#Raiz}\dist\DescarregadorDeFotos\*"; DestDir: "{app}"; Flags: ignoreve
 [InstallDelete]
 ; arquivos da versao anterior que nao existem mais na nova
 Type: filesandordirs; Name: "{app}\_internal"
+; atalhos com o nome antigo (antes do DropHouse): saem para nao ficarem dois icones
+Type: files; Name: "{autodesktop}\Descarregador de Fotos.lnk"
+Type: files; Name: "{autoprograms}\Descarregador de Fotos.lnk"
+Type: files; Name: "{autoprograms}\Pasta de dados do Descarregador de Fotos.lnk"
 
 [Icons]
 Name: "{autodesktop}\{#Nome}"; Filename: "{app}\{#Exe}"
 Name: "{autoprograms}\{#Nome}"; Filename: "{app}\{#Exe}"
-Name: "{autoprograms}\Pasta de dados do {#Nome}"; Filename: "{%USERPROFILE}\Descarregador de Fotos"
+Name: "{autoprograms}\Pasta de dados do {#Nome}"; Filename: "{%USERPROFILE}\{#Pasta}"
 
 [Run]
 ; libera a porta do servidor (50007/TCP) e a descoberta do lider (50008/UDP) em qualquer tipo de rede (a da

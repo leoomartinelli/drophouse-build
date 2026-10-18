@@ -20,7 +20,7 @@ from app.versao import tupla  # noqa: E402
 # o que, se mudar, chega nos PCs (o resto nao muda o programa instalado)
 CAMINHOS_DO_PROGRAMA = ["app", "run.py", "requirements.txt", "packaging/descarregador.spec", "packaging/windows",
                         "packaging/linux", "packaging/macos", "packaging/versao_windows.py", "VERSION",
-                        "housinho.png", "housinho.ico"]
+                        "drophouse.png", "drophouse.ico"]
 
 
 def git(*args):
