@@ -674,6 +674,13 @@ body.pausado .mascote *,body.pausado .simbolo *,body.pausado .wordmark,body.tela
 .carregando progress{height:12px;margin-top:6px}
 .carregando .cp-num{font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums;margin:6px 0 0}
 .carregando .mini{margin:4px 0 0}
+/* confirmacao depois de enviar ao Drive: tela grande, some sozinha ou no botao "Proximo voluntario" */
+.envio-ok .modal{position:relative;max-width:480px}
+.envio-ok h2{font-size:1.45rem}
+.envio-ok .ok-sub{font-size:1.08rem;margin:0}
+.envio-ok .ok-conta{min-height:1.2em}
+.envio-ok .btns{justify-content:center;width:100%;margin-top:8px}
+.envio-ok .btns button{min-width:220px}
 /* cartao com fotos de dias diferentes: um dia por linha (miniatura, data, quantidade); o mais recente em destaque.
    As caixas de marcar so aparecem em "Escolher quais datas" */
 .dias-modal{white-space:normal}

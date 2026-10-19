@@ -107,6 +107,37 @@ def test_grupos_invalidos_sao_recusados(drive_falso):
     assert drive_falso == []
 
 
+def test_proximo_voluntario_nao_interrompe_o_envio(drive_falso, monkeypatch):
+    """Issue #38: limpar a sessao libera o PC para o proximo cartao, e o envio anterior termina com as fotos dele."""
+    import threading
+    criar_servir()
+    descarregar("Ana", 2)
+    caminhos = list(E.arquivos_transferidos)
+    fotos = [os.path.basename(p) for p in caminhos]
+    servir_id = E.active_servir["id"]
+    segurar = threading.Event()
+
+    def devagar(job, creds, folder_id, arquivos, raiz=None):
+        assert job["fotografo"] == "Ana"
+        segurar.wait(5)
+        drive_falso.append((folder_id, sorted(os.path.basename(a) for a in arquivos)))
+        job.update(estado="concluido", feitos=len(arquivos), progresso=1, msg="enviado")
+        drive._em_envio.difference_update(arquivos)
+    monkeypatch.setattr(drive, "_enviar", devagar)
+
+    assert local.post("/api/upload/iniciar", json={"link": PASTA_X}).status_code == 200
+    assert local.post("/api/transferencia/nova").status_code == 200
+    assert E.arquivos_transferidos == [] and E.sessao_fotografo is None and E.transfer["estado"] == "idle"
+    assert E.active_servir["id"] == servir_id          # culto, pasta base e link do Drive continuam
+    assert any(j["estado"] in ("fila", "rodando") and j["fotografo"] == "Ana" for j in E.uploads)
+    descarregar("Bia", 1)                              # o proximo voluntario ja copia, com o envio da Ana parado no meio
+    segurar.set()
+    esperar(drive_falso, 1)
+    assert drive_falso[0][1] == sorted(fotos)
+    for p in caminhos:                                 # trocar de voluntario nao apaga as fotos que ja estavam no computador
+        assert os.path.exists(p)
+
+
 def test_envio_separado_espera_o_preset_terminar(drive_falso, monkeypatch):
     criar_servir()
     descarregar("Ana", 2)

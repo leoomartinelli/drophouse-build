@@ -907,7 +907,7 @@ async function vDescarregar() {
     q('#b-sel').onclick = abrirRevisor;
     if (q('#b-edit')) q('#b-edit').onclick = () => abrirEditor();
     q('#b-abrir').onclick = () => api('/api/revisor/abrir-pasta', { body: {} }).catch(e => toast(e.message, true));
-    q('#b-novo').onclick = async () => { await api('/api/transferencia/nova', { body: {} }); S.sel.nome = ''; S.sel.outro = ''; S.sel.driveManual = false; W.step = 1; W.pastas = []; W.previa = null; W.fotografo = ''; S.finalPath = ''; S.oChave = null; await carregar(); vDescarregar(); };
+    q('#b-novo').onclick = async () => { try { await liberarParaProximo(); } catch (e) { toast(e.message, true); } };
     q('#s-drive').onchange = e => { S.sel.drive = e.target.value; S.sel.driveManual = true; };
     // preset em todas as fotos: salva em segundo plano pela fila do editor. Enquanto aplica, a tela de loading cobre
     // tudo (nada embaixo pode ser usado) e o envio ao Drive so libera no fim; o servidor tambem recusa o envio.
@@ -945,14 +945,59 @@ async function vDescarregar() {
       const btn = ev.currentTarget; if (btn.disabled) return;
       btn.disabled = true;   // duplo clique nao envia duas vezes
       const o = optsDrive.find(x => x.r === S.sel.drive);
-      try {
-        const r = await api('/api/upload/iniciar', { body: { link: o ? o.l : '' } });
-        toast(r && r.ignoradas ? `Envio iniciado (${r.ignoradas} foto(s) já enviadas ou em envio foram puladas).` : 'Envio ao Drive iniciado em segundo plano.');
-        uploadsAtualiza();
-      } catch (e) { alertaErro('Envio ao Drive', e.message); }
-      setTimeout(() => { btn.disabled = false; }, 1500);
+      let r;
+      try { r = await api('/api/upload/iniciar', { body: { link: o ? o.l : '' } }); }
+      catch (e) { alertaErro('Envio ao Drive', e.message); setTimeout(() => { btn.disabled = false; }, 1500); return; }
+      // o envio ja esta na fila: a confirmacao cobre a tela e, por baixo, o proximo voluntario comeca do cartao
+      const fim = confirmacaoEnvio(r && r.ignoradas ? `${fmtNum(r.ignoradas)} foto(s) já enviadas ou em envio foram puladas.` : '');
+      uploadsAtualiza();
+      try { await liberarParaProximo(); } catch (e) { toast(e.message, true); }
+      await fim;
     };
   }
+}
+
+// depois do envio ao Drive (ou de "Novo descarregamento"): limpa nome, selecao e preset do voluntario
+// e volta para o passo 1 do descarregamento. O Dia de Servir e os envios em andamento ficam.
+async function liberarParaProximo() {
+  await api('/api/transferencia/nova', { body: {} });
+  S.sel.nome = ''; S.sel.outro = ''; S.sel.driveManual = false; S.presetVisto = false;
+  delete S.sel.fot; delete S.sel.cat; delete S.sel.drive;
+  const W = S.wiz || (S.wiz = { step: 1, pastas: [] });
+  W.step = 1; W.pastas = []; W.previa = null; W.fotografo = ''; W.recemIniciado = false;
+  S.finalPath = ''; S.oChave = null;
+  await carregar();
+  await vDescarregar();
+}
+
+// tela grande de sucesso: some sozinha em alguns segundos, ou no botao. O envio segue no painel discreto.
+const ENVIO_OK_MS = 5000;
+function confirmacaoEnvio(extra) {
+  return new Promise(res => {
+    const bg = document.createElement('div'); bg.className = 'modal-bg carregando envio-ok';
+    bg.innerHTML = `<div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="ok-tit" aria-describedby="ok-sub">
+      ${mascote('feliz', 84)}
+      <h2 id="ok-tit" class="ok">${ic('ok', 'desenha')}Fotos descarregadas com sucesso!</h2>
+      <p class="ok-sub" id="ok-sub">Suas fotos estão sendo enviadas pro Drive.</p>
+      ${extra ? `<p class="mut mini">${esc(extra)}</p>` : ''}
+      <p class="mut mini ok-conta" id="ok-conta" aria-live="polite"></p>
+      <div class="btns"><button data-foco>Próximo voluntário</button></div></div>`;
+    $modal.appendChild(bg);
+    const caixa = bg.querySelector('.modal');
+    let foi = false, t = null;
+    const fim = () => { if (foi) return; foi = true; clearInterval(t); if (bg.isConnected) bg.remove(); res(); };
+    const fimEm = Date.now() + ENVIO_OK_MS;
+    const conta = bg.querySelector('#ok-conta');
+    const tick = () => {
+      const s = Math.max(0, Math.ceil((fimEm - Date.now()) / 1000));
+      if (conta) conta.textContent = s ? `O próximo voluntário começa em ${s} s` : '';
+      if (!s) fim();
+    };
+    tick(); t = setInterval(tick, 250);
+    bg.querySelector('button').onclick = fim;
+    dialogo(bg, fim);
+    confete(caixa);
+  });
 }
 
 // cartao com fotos de dias diferentes: lista cada dia (miniatura, data e quantidade) e sugere so o mais recente.
@@ -1918,8 +1963,11 @@ async function abrirEnvioSeparado(destinos) {
     const b = $('#sp-enviar'); b.disabled = true;
     try {
       const res = await api('/api/upload/separado', { body: { grupos: grupos.map(g => ({ link: g.link, indices: g.indices })) } });
-      toast(`${res.envios.length} envio(s) ao Drive iniciados em segundo plano${res.ignoradas ? ` (${res.ignoradas} foto(s) já enviadas foram puladas)` : ''}.`);
-      fechar(); uploadsAtualiza();
+      document.removeEventListener('keydown', tecla); el.remove(); document.body.classList.remove('tela-cheia');
+      const fim = confirmacaoEnvio(res.ignoradas ? `${fmtNum(res.ignoradas)} foto(s) já enviadas foram puladas.` : '');
+      uploadsAtualiza();
+      try { await liberarParaProximo(); } catch (er) { toast(er.message, true); }
+      await fim;
     } catch (e) { b.disabled = false; alertaErro('Envio ao Drive', e.message); }
   }
   const atalhos = () => modal(`<h2>Atalhos do envio separado</h2><table class="ed-atalhos">${[
@@ -2162,13 +2210,27 @@ const upSolta = () => {
 };
 $up.addEventListener('pointerup', upSolta); $up.addEventListener('pointercancel', upSolta);
 addEventListener('resize', () => { if ($up.style.left) { const r = $up.getBoundingClientRect(); upPosiciona(r.left, r.top); } folgaUploads(); });
-let upAtivosAntes = 0;
+const upAvisados = new Set();
+let upAvisosProntos = false;
 async function uploadsAtualiza() {
   try {
     const l = await api('/api/uploads'); uploadsDesenha(l); folgaUploads();   // a tela pode ter trocado (topo em outro lugar)
-    const ativos = l.filter(j => j.estado === 'fila' || j.estado === 'rodando').length;
-    if (ativos < upAtivosAntes) { const ult = l.filter(j => ['concluido', 'erro', 'parado'].includes(j.estado)).pop(); if (ult) toast(ult.estado === 'erro' ? `Envio de ${ult.fotografo} terminou com erros` : ult.estado === 'parado' ? `Envio de ${ult.fotografo} parado` : `Envio de ${ult.fotografo} concluído`, ult.estado === 'erro'); }
-    upAtivosAntes = ativos;
+    // a primeira leitura so memoriza o que ja terminou (nao avisa envios antigos ao abrir a pagina)
+    if (!upAvisosProntos) {
+      l.forEach(j => { if (j.estado === 'concluido' || j.estado === 'erro' || j.estado === 'parado') upAvisados.add(j.id + ':' + j.estado); });
+      upAvisosProntos = true;
+      return;
+    }
+    for (const j of l) {
+      if (j.estado !== 'concluido' && j.estado !== 'erro' && j.estado !== 'parado') continue;
+      const k = j.id + ':' + j.estado;
+      if (upAvisados.has(k)) continue;
+      upAvisados.add(k);
+      // falha avisa mesmo com outro envio (ou outro voluntario) ainda em andamento; as fotos ficam no computador
+      if (j.estado === 'erro') toast(`Falha no envio de ${j.fotografo}: ${j.msg || 'veja o painel de envios.'}`, true);
+      else if (j.estado === 'parado') toast(`Envio de ${j.fotografo} parado`);
+      else toast(`Envio de ${j.fotografo} concluído`);
+    }
   } catch (e) { }
 }
 // aba escondida ou janela minimizada: nao fica perguntando ao servidor (volta na hora quando a tela aparece)
