@@ -466,11 +466,14 @@ def cancelar_transferencia():
 def nova_transferencia():
     E.arquivos_transferidos = []
     E.transfer = {"estado": "idle", "progresso": 0, "total": 0, "feitos": 0, "msg": ""}
+    E.sessao_fotografo = None            # nome, selecao e preset do voluntario anterior nao passam para o proximo
+    E.sessao_destino = None
     lote = editor.situacao_lote()
     if lote and not lote["rodando"]:     # o preset do descarregamento anterior ja terminou: nao aparece no proximo
         editor.LOTE.clear()
     painel.liberar()
-    # os envios ao Drive em andamento NAO sao tocados: continuam em segundo plano
+    # o Dia de Servir (culto, pasta base, link do Drive) fica. Os envios ao Drive em andamento tambem:
+    # continuam em segundo plano enquanto o proximo voluntario descarrega.
     return {"ok": True}
 
 
