@@ -72,7 +72,7 @@ jobs:
           - { nome: windows, os: windows-latest }
           # Ubuntu 22.04: o programa compilado roda nas distribuições de 2022 em diante
           - { nome: linux, os: ubuntu-22.04 }
-          - { nome: macos-apple-silicon, os: macos-14 }
+          - { nome: macos-apple-silicon, os: macos-15 }
           - { nome: macos-intel, os: macos-15-intel }
     runs-on: ${{ matrix.os }}
     env:
