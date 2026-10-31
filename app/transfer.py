@@ -299,7 +299,7 @@ def dias(arquivos, info=None):
         dia = por_dia.setdefault(d, {"data": d, "fotos": 0, "exemplo": None})
         dia["fotos"] += 1
         if dia["exemplo"] is None and a.lower().endswith(core.EXT_IMG):
-            dia["exemplo"] = os.path.relpath(a, E.drive_path)
+            dia["exemplo"] = _relativo_do_cartao(a) or None     # realpath dos dois lados: no Mac /var e atalho de /private/var
     return [por_dia[d] for d in sorted(por_dia)]
 
 
